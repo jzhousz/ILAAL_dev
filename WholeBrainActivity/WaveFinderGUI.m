@@ -22,7 +22,7 @@ function varargout = WaveFinderGUI(varargin)
 
 % Edit the above text to modify the response to help WaveFinderGUI
 
-% Last Modified by GUIDE v2.5 08-Nov-2016 16:52:28
+% Last Modified by GUIDE v2.5 19-Jan-2017 16:21:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -198,27 +198,14 @@ function pushbutton1_Callback(hObject,eventdata, handles)
 
 global folder_path2
 global folder_path1
-
+global opt_path3
 global min
 global max
 
-global light
-
-WaveStatistics(folder_path1,folder_path2, min, max, light)
 
 
+WaveStatistics(folder_path1,folder_path2,opt_path3,min, max)
 
-function light_Callback(hObject, eventdata, handles)
-% hObject    handle to light (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of light as text
-%        str2double(get(hObject,'String')) returns contents of light as a double
-
-optLight = str2double(get(hObject,'String'));
-global light
-light = optLight;
 
 
 % --- Executes during object creation, after setting all properties.
@@ -232,3 +219,27 @@ function light_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+OptogeneticLight = str2double(get(hObject,'String'));
+global opt_path3
+opt_path3 = OptogeneticLight;
+
+% --- Executes on button press in cmd_getDir3.
+function cmd_getDir3_Callback(hObject, eventdata, handles)
+% hObject    handle to cmd_getDir3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+folder = 'C:\Users\Acer\Documents\MATLAB';
+if ~exist(folder, 'dir')
+	folder = pwd;
+end
+fileSpecification = [folder '/*.tif*'];
+% Ask user to specify the file.
+[baseFileName, folder] = uigetfile(fileSpecification, 'Specify a file'); 
+if baseFileName == 0
+	return;
+end
+% Build up the full file name.
+fullFileName = fullfile(folder, baseFileName); 
+set(handles.txt_directory3,'String',fullFileName)
+global opt_path3
+opt_path3 = fullFileName;
