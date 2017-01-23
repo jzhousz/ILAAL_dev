@@ -1,4 +1,4 @@
-function WaveStatistics(image_path, save_path, miny, maxy, Light)
+function WaveStatistics(image_path, save_path, optoImage_path, miny, maxy)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %clear all
@@ -12,12 +12,13 @@ function WaveStatistics(image_path, save_path, miny, maxy, Light)
 %save_path = 'D:\research\waveAnalysis\exploration_data\1X\experimentalGroup\002';
 
         % ProjMax_ch01.tif
-        OPTLightTime = Light;
+        %OPTLightTime = Light;
         neuropil_miny = double(miny);   
         neuropil_maxy =  double(maxy);
         segmentxarray = [121 172 219 259 301 340 375 415];
         yticklabels =  1:8;
         FileTif = (image_path);
+        OptFileTif = (optoImage_path);
         %waveImage    = fullfile(save_path,waveImage.jpg);
         heatmapImage = fullfile(save_path,'heatmapImage');
         %waveOfSec = fullfile(save_path,waveOfSec);
@@ -35,13 +36,33 @@ function WaveStatistics(image_path, save_path, miny, maxy, Light)
 
 segmentHalfWidth = 11;
 
-% Reading the Video into Matlab
+% Reading the calcium image into Matlab
  InfoImage=imfinfo(FileTif);
  mImage=InfoImage(1).Width;
  nImage=InfoImage(1).Height;
 NumberImages=length(InfoImage);
 for i= 1:NumberImages
     vidFrames(:,:,i) = imread(FileTif,'Index',i);
+end
+
+% Reading the Optogenetic Light Detection Image 
+OptInfoImage=imfinfo(OptFileTif);
+ OptmImage=OptInfoImage(1).Width;
+ OptnImage=OptInfoImage(1).Height;
+OptNumberImages=length(OptInfoImage);
+for Opt= 1:OptNumberImages
+    OptvidFrames(:,:,Opt) = imread(OptFileTif,'Index',Opt);
+end
+
+%% Detection of Optogenetic Light Time
+
+firstFrameAvg = mean2(OptvidFrames(:,:,1));
+
+for j = 1: OptNumberImages
+    OptAvg = mean2(OptvidFrames(:,:,j));
+    if OptAvg > 2*firstFrameAvg % if intensity is more than 3 times of a normal frame => Light application time  
+        OPTLightTime = j;
+    end
 end
 
 %% Smoothing frames
@@ -72,7 +93,7 @@ end
 %     positionCount = positionCount+1;      
 % end
 
-t2 = 20;
+t2 = 10;
 for F0_frame = 1:NumberImages
     vectorstart = max(1, F0_frame-t2);
     vector = F1(vectorstart:F0_frame);
@@ -87,10 +108,9 @@ for rel = 1: NumberImages
     relative(:,:,rel) = relative(:,:,rel)./F0(rel);
 end
 
-
 %% denoising
-
-% t0 = 10;
+% 
+% t0 = 15;
 % denominator = 0;
 % 
 % for i = 1:NumberImages
@@ -460,7 +480,10 @@ for secNum = 1 : ExperNum
             %display(SegValue(SegValue >0))
             %display(direction(direction >0))
             
-            xlsinput2 = {'Firing_Time', 'Segment_location_of_firing','Duration_of_wave(Frames)','Number_of_Segments_covered', 'Wave_Speed(Segments/frame)', 'Amplitude(median)', 'Wave_direction';firing_time_loc, segment_location, Dur_of_wave, num_of_seg, excel_speed, medianAmplitude, wave_direction};
+            relativeTime = firing_time_loc - OPTLightTime; % firing time of each wave relative to optogenetic light application time
+            %relativeTime(relativeTime<0) = 0; % if difference<0 is made zero.
+            
+            xlsinput2 = {'Firing_Time', 'Segment_location_of_firing','Duration_of_wave(Frames)','Number_of_Segments_covered', 'Wave_Speed(Segments/frame)', 'Amplitude(median)', 'Wave_direction';relativeTime, segment_location, Dur_of_wave, num_of_seg, excel_speed, medianAmplitude, wave_direction};
            
             sheet = 1;
             xlRange1 = sprintf( 'A%s',num2str((wave_count*2)-1) );
@@ -473,7 +496,7 @@ for secNum = 1 : ExperNum
             
             if sum(SegValue) > 0
                 disp('--------------------------------------------------------------------------------------------------------------------------')
-                wave_count = wave_count +1;
+                wave_count = wave_count + 1;
                 
             end
             
@@ -481,7 +504,7 @@ for secNum = 1 : ExperNum
             afterOPTLightWaveIndex = find(sorted_firing_times_array > OPTLightTime, 1, 'first');
             afterOPTLightWave = sorted_firing_times_array(afterOPTLightWaveIndex);
             
-            xlsinput1 = {'Total_number_of_waves', 'First_Wave_firing_time_after_light', 'OptogeneticLight_application_time';wave_count-1,afterOPTLightWave, OPTLightTime};
+            xlsinput1 = {'Total_number_of_waves', 'First_Wave_firing_time_relative_to_light', 'OptogeneticLight_application_time';wave_count-1,afterOPTLightWave-OPTLightTime, OPTLightTime};
             sheet = 1;
             xlRange2 = sprintf( 'A%s',num2str((wave_count*2)-1));
             xlswrite(filename,xlsinput1,sheet,xlRange2);
