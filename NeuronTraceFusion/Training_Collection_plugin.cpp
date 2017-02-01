@@ -416,11 +416,14 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                                 
                                 NewSegment.y_start = min(thisNeuron.z, thatNeuron.z);
                                 NewSegment.y_end = ceil(max(thisNeuron.z, thatNeuron.z));
+                                
+                                
+                                
     //                            sumx2D += (max(nodeOneY, nodeTwoY) - min(nodeOneY, nodeTwoY)) +1;
     //                            sumy2D += (max(nodeOneZ, nodeTwoZ) - min(nodeOneZ, nodeTwoZ)) +1;
                                 
-                                sumx2D += (NewSegment.y_end - NewSegment.y_start) +1;
-                                sumy2D += (NewSegment.z_end - NewSegment.z_start) +1;
+                                sumx2D += (NewSegment.x_end - NewSegment.x_start) +1;
+                                sumy2D += (NewSegment.y_end - NewSegment.y_start) +1;
                             }
                         }
                         //X and Z have a dimension
@@ -735,6 +738,8 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         //Modified January 18th, 2017
         //Previously did not take into consideration that the xz or yz plane would be the roi. Added Conditionals and modified the respective offsets
         
+        //X-Y Plane
+        
         if((int)it->originalz1 - (int)it->originalz2 == 0){
             for(int i = (int)it->y_start; i <= (int)it->y_end; i++){
                 int offsety = i*xdim;
@@ -746,10 +751,12 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 }
             }
         }
+        
+        // Y-Z Plane
         else if((int)it->originalx1 - (int)it->originalx2 == 0){
-            for(int i = (int)it->z_start; i <= (int)it->z_end; i++){
+            for(int i = (int)it->y_start; i <= (int)it->y_end; i++){
                 int offsetz = i*xdim*ydim;
-                for(int j = (int)it->y_start; j <= (int)it->y_end; j++){
+                for(int j = (int)it->x_start; j <= (int)it->x_end; j++){
                     int totalOffset = offsetz + j*xdim + it->originalx1;
                     cout << "Grabbing data from the positions: " << totalOffset << endl;
                     newData[newX] = image1d[totalOffset];
@@ -757,8 +764,10 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 }
             }
         }
+        
+        //X-Z plane
         else{
-            for(int i = (int)it->z_start; i <= (int)it->z_end; i++){
+            for(int i = (int)it->y_start; i <= (int)it->y_end; i++){
                 int offsetz = i*xdim*ydim;
                 for(int j = (int)it->x_start; j <= (int)it->x_end; j++){
                     int totalOffset = offsetz + it->originaly1*xdim + j;
@@ -1402,7 +1411,13 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     
     //Extract Features
     //Define classifiers for each case
+    ofstream outfile;
     
+    outfile.open("/Users/randallsuvanto/Desktop/outPutTraining.txt");
+    
+    //Set up the output file
+    
+    outfile << "X1 \t Y1 \t Z1 \t X2 \t Y2 \t Z2 \t \t target\n";
 
     float *features1D = new float[2*numberOfSamples1D*averagex1D];
     float *features2D = new float[maxNumberOf2DSamples*averagex2D*averagey2D + numberofSamples2D*averagex2D*averagey2D];
@@ -1414,6 +1429,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     
     int oneDPos = 0;
     int oneDPos1 = 0;
+    
     for(vector<Image4DSimple*>::iterator it = OneDImageData.begin(); it != OneDImageData.end(); ++it){
         Image4DSimple* thisImage = *it;
         const unsigned char *data = thisImage->getRawData();
@@ -1486,6 +1502,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
         //Still Need Negative cases...
         
         //First of 3 cases : y,z plane
+
         if(thisSegment.originalx1 - thisSegment.originalx2 == 0){
             if(((thisSegment.originaly1 - thisSegment.originaly2 > 0) && (thisSegment.originalz1 - thisSegment.originalz2 > 0)) || ((thisSegment.originaly1 - thisSegment.originaly2 < 0) && (thisSegment.originalz1 - thisSegment.originalz2 < 0)))    //Case with increasing slope (from left to right)
             {
@@ -1524,7 +1541,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
             
         }
         
-        //Last case: in the x,y plane
+        //Last case: in the x,y plane   6_50_7    7_55_7
         else{
             //else if(thisSegment.originalz1 - thisSegment.originalz2 == 0){
             if(((thisSegment.originalx1 - thisSegment.originalx2 > 0) && (thisSegment.originaly1 - thisSegment.originaly2 > 0)) || ((thisSegment.originalx1 - thisSegment.originalx2 < 0) && (thisSegment.originaly1 - thisSegment.originaly2 < 0)))
@@ -1543,7 +1560,12 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
             }
             
         }
+        int thisTarget = targets2D[TwoDPos1];
         
+        
+        outfile << thisSegment.originalx1 << " \t " << thisSegment.originaly1 << " \t " << thisSegment.originalz1 << " \t "  << thisSegment.originalx2 << " \t " << thisSegment.originaly2 << " \t " << thisSegment.originalz2 << " \t \t " << thisTarget << "\n";
+        
+        cout << thisSegment.originalx1 << "_" << thisSegment.originaly1 << "_" << thisSegment.originalz1 << "_" << thisSegment.originalx2 << "_" << thisSegment.y_end << "_" << thisSegment.originalz2 << " label is set to :: " << targets2D[TwoDPos1] << endl;
         TwoDPos1++;
     }
     
@@ -1556,7 +1578,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
             features2D[TwoDPos] = (float)data[i];
             TwoDPos++;
             
-            cout << endl << features2D[TwoDPos] << endl;
+            cout << endl << (int)features2D[TwoDPos] << endl;
         }
         targets2D[TwoDPos1] = 0;
         TwoDPos1++;
