@@ -24,6 +24,9 @@ using namespace std;
 Q_EXPORT_PLUGIN2(Training_Collection, Training);
 int startPlugin(V3DPluginCallback2 &callback, QWidget *parent);
 
+svm_model *pmodel1;
+svm_model *pmodel2;
+svm_model *pmodel3;
 
 struct ROISegment
 {
@@ -42,7 +45,9 @@ struct ROISegment
     int originalz2;
 };
 
-bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimple*> TwoDImageData, vector<Image4DSimple*> ThreeDImageData, int averagex1D, int averagex2D, int averagey2D,int xDim, int yDim, int zDim, int numeberOfSamples, int numberOfSamples1D, int numberofSamples2D, vector<ROISegment> ROIs1D, vector<ROISegment> ROIs2D, vector<ROISegment> ROIs3D, vector<Image4DSimple*> Negative1DImageData, vector<Image4DSimple*> Negative2DImageData, vector<Image4DSimple*> Negative3DImageData, int maxNumberOf2DSamples, int maxNumberOf3DSamples, V3DPluginCallback2 &callback, QWidget *parent);
+bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimple*> TwoDImageData, vector<Image4DSimple*> ThreeDImageData, int averagex1D, int averagex2D, int averagey2D,int xDim, int yDim, int zDim, int numeberOfSamples, int numberOfSamples1D, int numberofSamples2D, vector<ROISegment> ROIs1D, vector<ROISegment> ROIs2D, vector<ROISegment> ROIs3D, vector<Image4DSimple*> Negative1DImageData, vector<Image4DSimple*> Negative2DImageData, vector<Image4DSimple*> Negative3DImageData, int maxNumberOf2DSamples, int maxNumberOf3DSamples, V3DPluginCallback2 &callback, QWidget *parent, unsigned char OneDArrayData[], unsigned char negativeArrayData1D[], unsigned char TwoDArrayData[], unsigned char negativeArrayData2D[], unsigned char ThreeDArrayData[], unsigned char negativeArrayData3D[]);
+
+bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifier, SVMClassifier* ThreeDClassifier, int OneDImageArraySize, int TwoDImageArraySize, int ThreeDImageArraySize, int TwoDXDim, int TwoDYDim, int ThreeDXDim, int ThreeDYDim, int ThreeDZDim, V3DPluginCallback2 &callback,  QWidget *parent);
 
 QStringList Training::menulist() const
 {
@@ -283,7 +288,6 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     int maxNumberOf3DSamples = min(placeHolder2, Sum3DCase4);
     
     cout << "The Mins are " << maxNumberOf2DSamples << ", " << maxNumberOf3DSamples << endl;
-    //exit(0);
     
     cout << "Total In 0DCases  :: " << total0DConnections << endl << endl;
     cout << "Total In 1DCases  :: " << total1DConnections << endl << endl;
@@ -300,7 +304,6 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     int AmountOf3DCase3 = 0;
     int AmountOf3DCase4 = 0;
     
-   // exit(0);
     
     for(int i = 0; i < neuron1.listNeuron.size(); i++)
     {
@@ -346,15 +349,15 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                         cout << "1D Case :: " << thisNeuron.x << ", " << thisNeuron.y << ", " << thisNeuron.z << " to " << thatNeuron.x << ", " << thatNeuron.y << ", " << thatNeuron.z << endl;
                         cout << "Translated to :: " << nodeOneX << ", " << nodeOneY << ", " << nodeOneZ << " to " << nodeTwoX << ", " << nodeTwoY << ", " << nodeTwoZ << endl;
                         if(nodeOneX == nodeTwoX && nodeOneY == nodeTwoY){
-                            NewSegment.x_start = min(thisNeuron.x, thatNeuron.x);
-                            NewSegment.x_end = ceil(max(thisNeuron.x, thatNeuron.x));
-                            sumx1D += (NewSegment.z_end - NewSegment.z_start) +1;
+                            NewSegment.x_start = min(thisNeuron.z, thatNeuron.z);
+                            NewSegment.x_end = ceil(max(thisNeuron.z, thatNeuron.z));
+                            sumx1D += (NewSegment.x_end - NewSegment.x_start) +1;
                         }
                         //only Y has a dimension
                         else if((nodeOneX == nodeTwoX && nodeOneZ == nodeTwoZ)){
                             NewSegment.x_start = min(thisNeuron.y, thatNeuron.y);
                             NewSegment.x_end = ceil(max(thisNeuron.y, thatNeuron.y));
-                            sumx1D += (NewSegment.y_end - NewSegment.y_start) +1;
+                            sumx1D += (NewSegment.x_end - NewSegment.x_start) +1;
                         }
                         //only X has a dimension
                         else{
@@ -613,13 +616,16 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     int ImageNumber1D = 0;  //1D
     int ImageNumber2D = 0;  //2D
     vector<Image4DSimple*> ThreeDImageData;
-    vector<Image4DSimple*> TwoDImageData;
+    vector<Image4DSimple*> TwoDImageData;   //SMART VECTOR (WORTH LOOKING INTO AND READING ABOUT)
     vector<Image4DSimple*> OneDImageData;
     
     int num_elements = sizeof(image1d) / sizeof(image1d[0]);
     cout << "The array is " << num_elements <<  " large" << endl;
     
     int count = 0;
+    
+    unsigned char OneDArrayData[ROIs1D.size()*averagex1D];
+    int OneDArrayCounter = 0;
     
     for(vector<ROISegment>::iterator it = ROIs1D.begin(); it != ROIs1D.end(); ++it){
 //        int xdim = it->x_end - it->x_start + 1;
@@ -631,7 +637,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int newX = 0;
         unsigned char newData[(int)it->x_end - (int)it->x_start +1];
         
-        if((int)it->y_start - (int)it->y_end == 0 && (int)it->z_start - (int)it->z_end == 0){
+        if((int)it->originaly1 - (int)it->originaly2 == 0 && (int)it->originalz1 - (int)it->originalz2== 0){
             int offSetYZ = it->originalz1*ydim*xdim + it->originaly1*xdim;
             for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
                 int totalOffset = i + offSetYZ;
@@ -641,7 +647,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             }
         }
         
-        if((int)it->x_start - (int)it->x_end == 0 && (int)it->z_start - (int)it->z_end == 0){
+        if((int)it->originalx1 - (int)it->originalx2 == 0 && (int)it->originalz1 - (int)it->originalz2 == 0){
             int offSetXZ = it->originalz1*ydim*xdim + it->originalx1;
             for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
                 int totalOffset = i*xdim + offSetXZ;
@@ -651,9 +657,9 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             }
         }
         
-        if((int)it->x_start - (int)it->x_end == 0 && (int)it->y_start - (int)it->y_end == 0){
+        if((int)it->originalx1 - (int)it->originalx2 == 0 && (int)it->originaly1 - (int)it->originaly2 == 0){
             int offSetXY = it->originaly1*xdim + it->originalx1;
-            for(int i = (int)it->z_start; i <= (int)it->z_end; i++){    //1D data --> Only populate the X-Dim
+            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
                 int totalOffset = i*ydim*xdim + offSetXY;
                 cout << "Grabbing data from positions :: " << totalOffset << endl;
                 newData[newX] = image1d[totalOffset];
@@ -700,7 +706,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int zdim = (int)it->z_end-(int)it->z_start+1;
         
         //cout << "Data2: " << newData << endl;
-        newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, (int)it->y_end-(int)it->y_start+1, (int)it->z_end-(int)it->z_start+1, tImage->getCDim(), tImage->getDatatype());
+        newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, 1, 1, tImage->getCDim(), tImage->getDatatype());
         cout << "data is set" << endl;
         stringstream ss;
         ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
@@ -713,6 +719,11 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         Image4DSimple* resizedImage = new Image4DSimple;
         int resizedX = averagex1D;
         
+        for(int i = 0; i < averagex1D; i++){
+            OneDArrayData[OneDArrayCounter] = resizedData2[i];
+            OneDArrayCounter++;
+        }
+        
         resizedImage->setData(resizedData2, averagex1D, 1, 1, tImage->getCDim(), tImage->getDatatype());
         cout << "Resized data is set" << endl;
         string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/1DResizedTrainingImage" + str + ".v3draw";
@@ -724,6 +735,9 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     }
     
     //2D cases
+    
+    unsigned char TwoDArrayData[averagey2D*averagex2D*ROIs2D.size()];
+    int TwoDArrayCounter = 0;
     
     for(vector<ROISegment>::iterator it = ROIs2D.begin(); it!=ROIs2D.end(); ++it){
 //        int xdim = it->x_end - it->x_start +1;
@@ -847,8 +861,9 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int zdim = (int)it->z_end-(int)it->z_start+1;
         
         //cout << "Data2: " << newData << endl;
-        newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, (int)it->y_end-(int)it->y_start+1, (int)it->z_end-(int)it->z_start+1, tImage->getCDim(), tImage->getDatatype());
+        newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, (int)it->y_end-(int)it->y_start+1, 1, tImage->getCDim(), tImage->getDatatype());
         cout << "data is set" << endl;
+        
         stringstream ss;
         ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
         string str = ss.str();
@@ -862,7 +877,14 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int resizedY = averagey2D;
         
         resizedImage->setData(resizedData2, averagex2D, averagey2D, 1, tImage->getCDim(), tImage->getDatatype());
+        
         cout << "Resized data is set" << endl;
+        
+        for(int i = 0; i < averagey2D*averagex2D; i++){
+            TwoDArrayData[TwoDArrayCounter] = resizedData2[i];
+            TwoDArrayCounter++;
+        }
+        cout << endl;
         string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/2DResizedTrainingImage" + str + ".v3draw";
         if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
             cout << "Resized Image Saved" << endl;
@@ -872,6 +894,20 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         
         
     }
+    
+    for(vector<Image4DSimple*>::iterator it = TwoDImageData.begin(); it != TwoDImageData.end(); ++it){
+        Image4DSimple* thisImage = *it;
+        const unsigned char *data = thisImage->getRawData();
+        for(int i = 0; i < averagex2D*averagey2D; i++){
+            int thisNum = (int)data[i];
+            cout << thisNum << " ";
+        }
+        cout << endl;
+    }
+    
+    unsigned char ThreeDArrayData[averagex3D*averagey3D*averagez3D*ROIs.size()];
+    int ThreeDArrayCounter = 0;
+    
     
     for(vector<ROISegment>::iterator it = ROIs.begin(); it != ROIs.end(); ++it){
         //Allocate space for each training image
@@ -1021,6 +1057,11 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int resizedY = averagey3D;
         int resizedZ = averagez3D;
         
+        for(int i = 0; i < averagex3D*averagey3D*averagez3D; i++){
+            ThreeDArrayData[ThreeDArrayCounter] = resizedData2[i];
+            ThreeDArrayCounter++;
+        }
+        
         resizedImage->setData(resizedData2, averagex3D, averagey3D, averagez3D, tImage->getCDim(), tImage->getDatatype());
         cout << "Resized data is set" << endl;
         string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/ResizedTrainingImage" + str + ".v3draw";
@@ -1053,7 +1094,13 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     vector<ROISegment> Negative2D;
     vector<ROISegment> Negative3D;
     
+    Image4DSimple* newNegativeImage;
+    
     srand(time(NULL));
+    
+    unsigned char negativeArrayData1D[averagex1D*ROIs1D.size()];
+    int negativeOneDCounter = 0;
+    
     for(int i = 0; i < OneDImageData.size(); i++){
         bool isNegativeSample = false; //If a random sample is part of positive data set then find new random samples
         while(isNegativeSample == false){
@@ -1124,7 +1171,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 //Depending on what dimension is the one that changes, grabbing the pixel data will be different.
                 
                 Image4DSimple* newNegativeImage = new Image4DSimple;
-                unsigned char newData[averagex1D + 1];
+                unsigned char newData[averagex1D];
                 
                 if(newNegativeSegment.y_start == newNegativeSegment.y_end && newNegativeSegment.z_start == newNegativeSegment.z_end){   //If the x dimension changes
                     int pos = 0;
@@ -1159,7 +1206,12 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                         cout << "Added" << endl;
                     }
                 }
-                newNegativeImage->setData(newData, (int)newNegativeSegment.x_end-(int)newNegativeSegment.x_start+1, (int)newNegativeSegment.y_end-(int)newNegativeSegment.y_start+1, (int)newNegativeSegment.z_end-(int)newNegativeSegment.z_start+1, tImage->getCDim(), tImage->getDatatype());
+                
+                for(int i = 0; i < averagex1D; i++){
+                    negativeArrayData1D[negativeOneDCounter] = newData[i];
+                    negativeOneDCounter++;
+                }
+                newNegativeImage->setData(newData, averagex1D, 1, 1, tImage->getCDim(), tImage->getDatatype());
                 
                 cout << "Dimensions :: " << (int)newNegativeSegment.x_end-(int)newNegativeSegment.x_start+1 << ", " << (int)newNegativeSegment.y_end-(int)newNegativeSegment.y_start+1 << ", " << (int)newNegativeSegment.z_end-(int)newNegativeSegment.z_start+1 << endl << "Size of data array :: " << sizeof( newData ) / sizeof( newData[0] ) << endl;
                 
@@ -1179,6 +1231,13 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             }
         }
     }
+    
+    
+    
+
+    unsigned char negativeArrayData2D[maxNumberOf2DSamples*averagey2D*averagex2D];
+    int negativeTwoDCounter = 0;
+    
     for(int i = 0; i < maxNumberOf2DSamples; i++){
         bool isNegativeSample = false; //If a random sample is part of positive data set then find new random samples
         ROISegment newNegativeSegment;
@@ -1243,7 +1302,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             
             //get the image data from the image based on random sampling ROI segments
             Image4DSimple* newNegativeImage = new Image4DSimple;
-            unsigned char newData[(averagex2D + 1)* (averagey2D + 1)];
+            unsigned char newData[(averagex2D)*(averagey2D)];
             
             //If the xDim does not change (y & z does)
             if(newNegativeSegment.x_start == newNegativeSegment.x_end && newNegativeSegment.y_start != newNegativeSegment.y_end && newNegativeSegment.z_start != newNegativeSegment.z_end){
@@ -1295,8 +1354,11 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 }
             }
             //FINISH THIS
-            
-            newNegativeImage->setData(newData, (int)newNegativeSegment.x_end-(int)newNegativeSegment.x_start+1, (int)newNegativeSegment.y_end-(int)newNegativeSegment.y_start+1, (int)newNegativeSegment.z_end-(int)newNegativeSegment.z_start+1, tImage->getCDim(), tImage->getDatatype());
+            for(int i = 0; i < averagey2D*averagex2D; i++){
+                negativeArrayData2D[negativeTwoDCounter] = newData[i];
+                negativeTwoDCounter++;
+            }
+            newNegativeImage->setData(newData, averagex2D, averagey2D, 1, tImage->getCDim(), tImage->getDatatype());
             
             Negative2DImageData.push_back(newNegativeImage);
             
@@ -1321,6 +1383,10 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             }
         }
     }
+    
+    unsigned char negativeArrayData3D[maxNumberOf3DSamples*averagex3D*averagey3D*averagez3D];
+    int negativeThreeDCounter = 0;
+    
     for(int i = 0; i < maxNumberOf3DSamples; i++){
         //All dimensions change in the 3D case. No Constants.
         bool isNegativeSample = false;
@@ -1357,7 +1423,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 cout << "Added Negative sample (3D) : " << endl << newNegativeSegment.x_start << " " << newNegativeSegment.x_end << endl << newNegativeSegment.y_start << " " << newNegativeSegment.y_end << endl << newNegativeSegment.z_start << " " << newNegativeSegment.z_end << endl << endl;
                 
                 Image4DSimple* newNegativeImage = new Image4DSimple;
-                unsigned char newData[(averagex3D + 1)* (averagey3D + 1)*(averagez3D + 1)];
+                unsigned char newData[(averagex3D)*(averagey3D)*(averagez3D)];
                 
                 int pos = 0;
                 for(int k = newNegativeSegment.z_start; k <= newNegativeSegment.z_end; k++){
@@ -1372,7 +1438,12 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                     }
                 }
                 
-                newNegativeImage->setData(newData, (int)newNegativeSegment.x_end-(int)newNegativeSegment.x_start+1, (int)newNegativeSegment.y_end-(int)newNegativeSegment.y_start+1, (int)newNegativeSegment.z_end-(int)newNegativeSegment.z_start+1, tImage->getCDim(), tImage->getDatatype());
+                
+                for(int i = 0; i < averagex3D*averagey3D*averagez3D; i++){
+                    negativeArrayData3D[negativeThreeDCounter] = newData[i];
+                    negativeThreeDCounter++;
+                }
+                newNegativeImage->setData(newData, averagex3D, averagey3D, averagez3D, tImage->getCDim(), tImage->getDatatype());
                 
                 Negative3DImageData.push_back(newNegativeImage);
                 
@@ -1402,17 +1473,18 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
     
     cout << "Will now set up training.." << endl;
     cout << "The sizes of the images should be :: " << endl << "For one 1D Classifier :: " << averagex1D << endl << "For the 2D classifier :: " << averagex2D << ", " << averagey2D << endl << "For the 3D classifier :: " << averagex3D << ", " << averagey3D << ", " << averagez3D << endl;
-    setUpTrainingData(OneDImageData, TwoDImageData, ThreeDImageData, averagex1D, averagex2D, averagey2D, averagex3D, averagey3D, averagez3D, ImageNumber,ImageNumber1D, ImageNumber2D, ROIs1D, ROIs2D ,ROIs, Negative1DImageData, Negative2DImageData, Negative3DImageData, maxNumberOf2DSamples, maxNumberOf3DSamples, callback, parent);
+    setUpTrainingData(OneDImageData, TwoDImageData, ThreeDImageData, averagex1D, averagex2D, averagey2D, averagex3D, averagey3D, averagez3D, ImageNumber,ImageNumber1D, ImageNumber2D, ROIs1D, ROIs2D ,ROIs, Negative1DImageData, Negative2DImageData, Negative3DImageData, maxNumberOf2DSamples, maxNumberOf3DSamples, callback, parent, OneDArrayData, negativeArrayData1D, TwoDArrayData, negativeArrayData2D, ThreeDArrayData, negativeArrayData3D);
     
     return 0;
 }
 
-bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimple*> TwoDImageData, vector<Image4DSimple*> ThreeDImageData, int averagex1D, int averagex2D, int averagey2D,int xDim, int yDim, int zDim, int numeberOfSamples, int numberOfSamples1D, int numberofSamples2D, vector<ROISegment> ROIs1D, vector<ROISegment> ROIs2D, vector<ROISegment> ROIs3D, vector<Image4DSimple*> Negative1DImageData, vector<Image4DSimple*> Negative2DImageData, vector<Image4DSimple*> Negative3DImageData, int maxNumberOf2DSamples, int maxNumberOf3DSamples, V3DPluginCallback2 &callback, QWidget *parent){
+bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimple*> TwoDImageData, vector<Image4DSimple*> ThreeDImageData, int averagex1D, int averagex2D, int averagey2D,int xDim, int yDim, int zDim, int numeberOfSamples, int numberOfSamples1D, int numberofSamples2D, vector<ROISegment> ROIs1D, vector<ROISegment> ROIs2D, vector<ROISegment> ROIs3D, vector<Image4DSimple*> Negative1DImageData, vector<Image4DSimple*> Negative2DImageData, vector<Image4DSimple*> Negative3DImageData, int maxNumberOf2DSamples, int maxNumberOf3DSamples, V3DPluginCallback2 &callback, QWidget *parent, unsigned char OneDArrayData[], unsigned char negativeArrayData1D[], unsigned char TwoDArrayData[], unsigned char negativeArrayData2D[], unsigned char ThreeDArrayData[], unsigned char negativeArrayData3D[] ){
     
     //Extract Features
     //Define classifiers for each case
     ofstream outfile;
     
+
     outfile.open("/Users/randallsuvanto/Desktop/outPutTraining.txt");
     
     //Set up the output file
@@ -1430,25 +1502,26 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     int oneDPos = 0;
     int oneDPos1 = 0;
     
+    int testPositionOneD = 0;
+    
+    for(int i = 0; i < numberOfSamples1D*averagex1D; i++){
+        features1D[i] = OneDArrayData[i];
+        testPositionOneD++;
+    }
+    for(int i = 0; i < numberOfSamples1D*averagex1D; i++){
+        features1D[testPositionOneD] = negativeArrayData1D[i];
+        testPositionOneD++;
+    }
+    
+    
     for(vector<Image4DSimple*>::iterator it = OneDImageData.begin(); it != OneDImageData.end(); ++it){
         Image4DSimple* thisImage = *it;
         const unsigned char *data = thisImage->getRawData();
         for(int i = 0; i < averagex1D; i++){
             int thisNum = (int)data[i];
-            features1D[oneDPos] = (float)data[i];
+            //features1D[oneDPos] = (float)data[i];
             oneDPos++;
         }
-        ROISegment thisSegment;
-        thisSegment.x_start = (ROIs1D.begin()+oneDPos1)->x_start;
-        thisSegment.x_end = (ROIs1D.begin() + oneDPos1)->x_end;
-        thisSegment.y_start = (ROIs1D.begin() + oneDPos1)->y_start;
-        thisSegment.y_end = (ROIs1D.begin() + oneDPos1)->y_end;
-        thisSegment.originalx1 = (ROIs1D.begin()+oneDPos1)->originalx1;
-        thisSegment.originalx2 = (ROIs1D.begin()+oneDPos1)->originalx2;
-        thisSegment.originaly1 = (ROIs1D.begin()+oneDPos1)->originaly1;
-        thisSegment.originaly2 = (ROIs1D.begin()+oneDPos1)->originaly2;
-        thisSegment.originalz1 = (ROIs1D.begin()+oneDPos1)->originalz1;
-        thisSegment.originalz2 = (ROIs1D.begin()+oneDPos1)->originalz2;
         
         //One case: x_start to x_end. The image data has been adjusted before so that all the info is stored in the 'x' variables
         //There are 2 cases: true or false. Still need a way to get false data where targets1D[oneDPos1] = 0
@@ -1463,22 +1536,33 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
         const unsigned char *data = thisImage->getRawData();
         for(int i = 0; i < averagex1D; i++){
             int thisNum = (int)data[i];
-            features1D[oneDPos] = (float)data[i];
+           // features1D[oneDPos] = (float)data[i];
             oneDPos++;
         }
         targets1D[oneDPos1] = 0;
         oneDPos1++;
     }
-    
-    
+
     int TwoDPos = 0;
     int TwoDPos1 = 0;
+    
+    int testPosition = 0;
+    
+    for(int i = 0; i < numberofSamples2D*averagex2D*averagey2D; i++){
+        features2D[i] = TwoDArrayData[i];
+        testPosition++;
+    }
+    for(int i = 0; i < maxNumberOf2DSamples*averagex2D*averagey2D; i++){
+        features2D[testPosition] = negativeArrayData2D[i];
+        testPosition++;
+    }
+    
     for(vector<Image4DSimple*>::iterator it = TwoDImageData.begin(); it != TwoDImageData.end(); ++it){
         Image4DSimple * thisImage = *it;
         const unsigned char * data = thisImage->getRawData();
         for(int i = 0; i < averagex2D*averagey2D; i++){
             int thisNum = (int)data[i];
-            features2D[TwoDPos] = (float)data[i];
+            //features2D[TwoDPos] = (float)data[i];
             TwoDPos++;
         }
         ROISegment thisSegment;
@@ -1571,19 +1655,34 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     
     for(vector<Image4DSimple*>::iterator it = Negative2DImageData.begin(); it != Negative2DImageData.end(); ++it){
         Image4DSimple* thisImage = *it;
-        cout << "Data in the features array [2D] :: ";
         const unsigned char *data = thisImage->getRawData();
         for(int i = 0; i < averagex2D*averagey2D; i++){
             int thisNum = (int)data[i];
-            features2D[TwoDPos] = (float)data[i];
+            //features2D[TwoDPos] = (float)data[i];
             TwoDPos++;
             
-            cout << endl << (int)features2D[TwoDPos] << endl;
         }
         targets2D[TwoDPos1] = 0;
         TwoDPos1++;
     }
+    cout << endl;
+    for(int i = 0; i < maxNumberOf2DSamples*averagex2D*averagey2D + numberofSamples2D*averagex2D*averagey2D; i++){
+        cout <<  features2D[i] << " ";
+    }
     
+    cout << endl << "Last data is at " << TwoDPos-1 << endl;
+    cout << "Size of the array is " << maxNumberOf2DSamples*averagex2D*averagey2D + numberofSamples2D*averagex2D*averagey2D<< endl;
+    
+    int testPositionThreeD = 0;
+    
+    for(int i = 0; i < numeberOfSamples*xDim*yDim*zDim; i++){
+        features3D[i] = ThreeDArrayData[i];
+        testPositionThreeD++;
+    }
+    for(int i = 0; i < maxNumberOf3DSamples*xDim*yDim*zDim; i++){
+        features3D[testPositionThreeD] = negativeArrayData3D[i];
+        testPositionThreeD++;
+    }
     
     int pos = 0;
     int pos2 = 0;
@@ -1592,7 +1691,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
         const unsigned char * data = thisImage->getRawData();
         for(int i = 0; i < xDim*yDim*zDim; i++){
             int thisNum = (int)data[i];
-            features3D[pos2] = (float)data[i];
+            //features3D[pos2] = (float)data[i];
             pos2++;
         }
         ROISegment thisSegment;
@@ -1666,7 +1765,7 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
         const unsigned char *data = thisImage->getRawData();
         for(int i = 0; i < xDim*yDim*zDim; i++){
             int thisNum = (int)data[i];
-            features3D[pos2] = (float)data[i];
+           // features3D[pos2] = (float)data[i];
             pos2++;
         }
         targets3D[pos] = 0;
@@ -1692,28 +1791,37 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     cout << "Size of the 2D Positive ROI Vector :: " << ROIs2D.size() << endl;
     cout << "Size of the 3D Positive ROI Vector :: " << ROIs3D.size() << endl;
     
-   // exit(0);
-    
     SVMClassifier* OneDClassifier = new SVMClassifier();
     SVMClassifier* TwoDClassifier = new SVMClassifier();
     SVMClassifier* ThreeDClassifier = new SVMClassifier();
     
     cout << "Training the 1D classifier" << endl;
     OneDClassifier->train(features1D, targets1D, numberCubes1D, numOfFeatures1D);
+    pmodel1 = OneDClassifier->loadSVMModel();
     cout << endl << endl;
     cout << "Training the 2D classifier" << endl;
     TwoDClassifier->train(features2D, targets2D, numberCubes2D, numOfFeatures2D);
+    pmodel2 = TwoDClassifier->loadSVMModel();
     cout << endl << endl;
     cout << "Training the 3D classifier" << endl;
     ThreeDClassifier->train(features3D, targets3D, numberCubes3D, numOfFeatures3D);
+    pmodel3 = ThreeDClassifier->loadSVMModel();
     cout << endl;
+    
+    bool classified = classifySamples(OneDClassifier, TwoDClassifier, ThreeDClassifier, averagex1D, averagex2D*averagey2D, xDim*yDim*zDim,  averagex2D, averagey2D, xDim, yDim, zDim, callback,  parent);
     
 }
 
+//Inputs :: Classifier for 1D Samples, Classifier for 2D samples, Classifier for 3D Classifiers
+//          Size of the Array for each 1D Sample -> use for linear interpolation
+//          Size of the Array for each 2D sample -> use for linear interpolation
+//          Size of the Array for each 3D Sample -> use for linear interpolation
 
-bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier, SVMClassifier ThreeDClassifier, int OneDImageArraySize, int TwoDImageArraySize, int ThreeDImageArraySize, int TwoDXDim, int TwoDYDim, int ThreeDXDim, int ThreeDYDim, int ThreeDZDim, V3DPluginCallback2 &callback,  QWidget *parent){
+bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifier, SVMClassifier* ThreeDClassifier, int OneDImageArraySize, int TwoDImageArraySize, int ThreeDImageArraySize, int TwoDXDim, int TwoDYDim, int ThreeDXDim, int ThreeDYDim, int ThreeDZDim, V3DPluginCallback2 &callback,  QWidget *parent){
     
     v3dhandle win = NULL;
+    
+    cout << "One D Image Array size is " << OneDImageArraySize << endl;
     
     QString inputFileName = QFileDialog::getOpenFileName(parent, QObject::tr("Choose the swc file to classify "), QDir::currentPath(),  QObject::tr("*.swc"));
     win = callback.currentImageWindow();
@@ -1742,91 +1850,111 @@ bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier,
     vector<Image4DSimple> ThreeDImages;
     
     for(int i = 0; i < neuron1.listNeuron.size(); i++){
-        
         NeuronSWC thisNeuron = neuron1.listNeuron.at(i);
         V3DLONG NodeParent = thisNeuron.pn;
-        if(NodeParent == -1)    //If there is no child
-        {
-            continue;               //ThisNeuron = 1     ThatNeuron = 2
+        
+        //If no parent then skip
+        if(NodeParent == -1){
+            continue;
         }
         
         else{
             for(int j = 0; j < neuron1.listNeuron.size(); j++){
                 V3DLONG thisID = neuron1.listNeuron.at(j).n;
-                 NeuronSWC thatNeuron = neuron1.listNeuron.at(j);
-                if(thisID == NodeParent){   //If this is an swc segment
-                    
-                    Image4DSimple NewImage;
+                NeuronSWC thatNeuron = neuron1.listNeuron.at(j);
+                
+                //If this is a neuron segment
+                if(thisID == NodeParent){
                     
                     ROISegment NewSegment;
-                    NewSegment.originalx1 = thisNeuron.x;
-                    NewSegment.originaly1 = thisNeuron.y;
-                    NewSegment.originalz1 = thisNeuron.z;
-                    NewSegment.originalx2 = thatNeuron.x;
-                    NewSegment.originaly2 = thatNeuron.y;
-                    NewSegment.originalz2 = thatNeuron.z;
-                    
-                    NewSegment.x_start = min(thisNeuron.x, thatNeuron.x);
-                    NewSegment.x_end = ceil(max(thisNeuron.x, thatNeuron.x));
-                    NewSegment.y_start = min(thisNeuron.y, thatNeuron.y);
-                    NewSegment.y_end = ceil(max(thisNeuron.y, thatNeuron.y));
-                    NewSegment.z_start = min(thisNeuron.z, thatNeuron.z);
-                    NewSegment.z_end = ceil(max(thisNeuron.z, thatNeuron.z));
                     
                     int nodeOneX = thisNeuron.x;
                     int nodeOneY = thisNeuron.y;
                     int nodeOneZ = thisNeuron.z;
+                    
                     int nodeTwoX = thatNeuron.x;
                     int nodeTwoY = thatNeuron.y;
                     int nodeTwoZ = thatNeuron.z;
                     
+                    NewSegment.originalx1 = thisNeuron.x;
+                    NewSegment.originalx2 = thatNeuron.x;
+                    NewSegment.originaly1 = thisNeuron.y;
+                    NewSegment.originaly2 = thatNeuron.y;
+                    NewSegment.originalz1 = thisNeuron.z;
+                    NewSegment.originalz2 = thatNeuron.z;
                     
-                    //check if 1D segment, 2D segment, or 3D segment
+                    NewSegment.x_start = 0;
+                    NewSegment.x_end = 0;
+                    NewSegment.y_start = 0;
+                    NewSegment.y_end = 0;
+                    NewSegment.z_start = 0;
+                    NewSegment.z_end = 0;
                     
-                    //1D (One dimension is not constant)
-                    if((nodeOneX == nodeTwoX && nodeOneY == nodeTwoY && nodeOneZ != nodeTwoZ) || (nodeOneX != nodeTwoX && nodeOneY == nodeTwoY && nodeOneZ == nodeTwoZ) || (nodeOneX == nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ == nodeTwoZ)){
-                        unsigned char newData[(NewSegment.x_end - NewSegment.x_start +1)*(NewSegment.y_end - NewSegment.y_start +1)*(NewSegment.z_end-NewSegment.z_start+1)];
-                        //Look for specific case of which Dimension changes
-                        //ZDim Changes
-                        if((nodeOneX == nodeTwoX && nodeOneY == nodeTwoY)){
-                            int pos = 0;
-                            for (int i = NewSegment.z_start; i <= NewSegment.z_end; i++){
-                                int offSet = nodeOneX + xDim*nodeOneY + xDim*yDim*i;
-                                newData[pos] = image1d[offSet];
-                                pos++;
-                            }
                     
-                            
+                    //If the nodes are at the same position skip for now
+                    if((nodeOneX == nodeTwoX) && (nodeOneY == nodeTwoY) && (nodeOneZ == nodeTwoZ)){
+                        continue;
+                    }
+                    
+                    //1D Case
+                    else if((nodeOneX == nodeTwoX && nodeOneY == nodeTwoY) || (nodeOneX == nodeTwoX && nodeOneZ == nodeTwoZ) || (nodeOneY == nodeTwoY && nodeOneZ == nodeTwoZ)){
+                        
+                        char changingDim = '0';
+                        
+                        //XDIM CHANGES
+                        if(nodeOneY == nodeTwoY && nodeOneZ == nodeTwoZ){
+                            NewSegment.x_start = min(nodeOneX, nodeTwoX);
+                            NewSegment.x_end = ceil(max(nodeOneX, nodeTwoX));
+                            changingDim = 'X';
                         }
-                        //YDim Changes
+                        
+                        //YDIM CHANGES
                         else if(nodeOneX == nodeTwoX && nodeOneZ == nodeTwoZ){
-                            int pos = 0;
-                            for(int i = NewSegment.y_start; i <= NewSegment.y_end; i++){
-                                int offSet = nodeOneX + xDim*i + xDim*yDim*nodeOneZ;
-                                newData[pos] = image1d[offSet];
+                            NewSegment.x_start = min(nodeOneY, nodeTwoY);
+                            NewSegment.x_end = ceil(max(nodeOneY, nodeTwoY));
+                            changingDim = 'Y';
+                        }
+                        //ZDIM CHANGES
+                        else if(nodeOneX == nodeTwoX && nodeOneY == nodeTwoY){
+                            NewSegment.x_start = min(nodeOneZ, nodeTwoZ);
+                            NewSegment.x_end = ceil(max(nodeOneZ, nodeTwoZ));
+                            changingDim = 'Z';
+                        }
+                        
+                        unsigned char newData[(int)NewSegment.x_end - (int)NewSegment.x_start +1];
+                        
+                        int pos = 0;
+                        //To determine offset
+                        if(changingDim == 'X'){
+                            for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                int offsetXYZ = x + xDim*NewSegment.originaly1 + xDim*yDim*NewSegment.originalz1;
+                                newData[pos] = image1d[offsetXYZ];
                                 pos++;
                             }
                             
                         }
-                        //XDim Changes
-                        else if(nodeOneY == nodeTwoY && nodeOneZ == nodeTwoZ){
-                            int pos = 0;
-                            for(int i = NewSegment.x_start; i <= NewSegment.x_end; i++){
-                                int offSet = i + xDim*nodeOneY + xDim*yDim*nodeOneZ;
-                                newData[pos] = image1d[offSet];
+                        else if(changingDim == 'Y'){
+                            for(int y = NewSegment.x_start; y < NewSegment.x_end; y++){
+                                int offsetXYZ = NewSegment.originalx1 + xDim*y + xDim*yDim*NewSegment.originalz1;
+                                newData[pos] = image1d[offsetXYZ];
                                 pos++;
                             }
                         }
                         
-                        unsigned char resizedData[OneDImageArraySize];
-                        
-                        //Linear Interpolation
-                        
-                        double ratiox = (((double)((int)NewSegment.x_end-(int)NewSegment.x_start +1))*((double)((int)NewSegment.y_end-(int)NewSegment.y_start +1))*((double)((int)NewSegment.z_end-(int)NewSegment.z_start +1)))/((double)OneDImageArraySize);
-                        int newXDim = ((double)((int)NewSegment.x_end-(int)NewSegment.x_start +1))*((double)((int)NewSegment.y_end-(int)NewSegment.y_start +1))*((double)((int)NewSegment.z_end-(int)NewSegment.z_start +1));
+                        else if(changingDim == 'Z'){
+                            for(int z = NewSegment.x_start; z < NewSegment.x_end; z++){
+                                int offsetXYZ = NewSegment.originalx1 + xDim*NewSegment.originaly1 + xDim*yDim*z;
+                                newData[pos] = image1d[offsetXYZ];
+                                pos++;
+                            }
+                        }
+                    
+                        double ratiox = ((double)((int)NewSegment.x_end-(int)NewSegment.x_start +1))/((double)OneDImageArraySize);
+                        int newXDim = NewSegment.x_end - NewSegment.x_start +1;
                         int posCounter = 0;
-                        //Always linear array, one dimension
+                        
                         int newCount = 0;
+                        unsigned char resizedData2[OneDImageArraySize];
                         for(int i = 0; i <= OneDImageArraySize-1; i++){
                             int i2low = floor(i*ratiox);
                             int i2high = floor((i+1)*ratiox-1);
@@ -1848,103 +1976,109 @@ bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier,
                             V3DLONG result = s/(cubeVolume);
                             cout << "Cube Volume = " << cubeVolume << endl;
                             cout << "result (Calc average)" << result << endl;
-                            resizedData[posCounter] = (unsigned char) result;
+                            resizedData2[posCounter] = (unsigned char) result;
                             posCounter++;
                         }
-                        float *features1D = new float[OneDImageArraySize];
-                        for(int i = 0; i <= OneDImageArraySize; i++){
-                            features1D[i] = (float)resizedData[i];
-                        }
-                        int classifierResult = OneDClassifier.classifyASample(features1D, OneDImageArraySize);
-                        cout << "The result after 1D classification :: " << classifierResult << endl;
                         
-                        if(classifierResult == 1){
-                            cout << "Connecting the segment " << endl;
-                        }
-                        else{
-                            cout << "Not connecting the segment " << endl;
-                        }
+                        cout << "The data is :: " << endl;
                         
+                        float *ClassifyArray = new float [OneDImageArraySize];
+                        
+                        for(int q = 0; q < OneDImageArraySize; q++){
+                            cout << (int)resizedData2[q] << endl;
+                            ClassifyArray[q] = resizedData2[q];
+                           // cout << ClassifyArray[q] << endl;
+                        }
+                        cout << endl;
+
+                        int classifierResult = OneDClassifier->classifyASample(ClassifyArray, OneDImageArraySize, pmodel1);
+                        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
                     }
                     
-                    //2D (Two dimensions are not constant)
-                    else if((nodeOneX == nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ != nodeTwoZ) || (nodeOneX != nodeTwoX && nodeOneY == nodeTwoY && nodeOneZ != nodeTwoZ) || (nodeOneX != nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ == nodeTwoZ)){
+                    else if((nodeOneX == nodeTwoX) || (nodeOneY == nodeTwoY) || (nodeOneZ == nodeTwoZ)){
                         
-                        unsigned char newData[(NewSegment.x_end - NewSegment.x_start +1)*(NewSegment.y_end - NewSegment.y_start +1)*(NewSegment.z_end-NewSegment.z_start+1)];
-                        int startingX2DSample;
-                        int startingY2DSample;
-                        int endingX2DSample;
-                        int endingY2DSample;
+                        char constDim = '0';
                         
-                        //Y-Z Dim
                         if(nodeOneX == nodeTwoX){
-                            //Keep the dimensions of the resized images constant (always in the XY plane)
-                            startingX2DSample = NewSegment.y_start;
-                            endingX2DSample = NewSegment.y_end;
-                            startingY2DSample = NewSegment.z_start;
-                            endingY2DSample = NewSegment.z_end;
                             
+                            NewSegment.x_start = min(nodeOneY, nodeTwoY);
+                            NewSegment.x_end = ceil(max(nodeOneY, nodeTwoY));
+                            NewSegment.y_start = min(nodeOneZ, nodeTwoZ);
+                            NewSegment.y_end = ceil(max(nodeOneZ, nodeTwoZ));
                             
-                            int pos = 0;
-                            for(int i = NewSegment.y_start; i <= NewSegment.y_end; i++){
-                                int offSetXY = nodeOneX + i*xDim;
-                                for(int j = NewSegment.z_start; j <= NewSegment.z_end; j++){
-                                    int offSet = offSetXY + xDim*yDim*j;
-                                    newData[pos] = image1d[offSet];
-                                    pos++;
-                                }
-                            }
+                            constDim = 'X';
+                            
                         }
-                        
-                        //X-Z Dim
                         else if(nodeOneY == nodeTwoY){
-                            //Keep the dimensions of the resized images constant (always in the XY plane)
-                            startingX2DSample = NewSegment.x_start;
-                            endingX2DSample = NewSegment.x_end;
-                            startingY2DSample = NewSegment.z_start;
-                            endingY2DSample = NewSegment.z_end;
                             
-                            int pos = 0;
-                            for(int k = NewSegment.z_start; k <= NewSegment.z_end; k++){
-                                int offSetYZ = xDim*nodeOneY + xDim*yDim*k;
-                                for(int i = NewSegment.x_start; i <= NewSegment.x_end; i++){
-                                    int offSet = i + offSetYZ;
-                                    newData[pos] = image1d[offSet];
-                                    pos++;
-                                }
-                            }
+                            NewSegment.x_start = min(nodeOneX, nodeTwoX);
+                            NewSegment.x_end = ceil(max(nodeOneX, nodeTwoX));
+                            NewSegment.y_start = min(nodeOneZ, nodeTwoZ);
+                            NewSegment.y_end = ceil(max(nodeOneZ, nodeTwoZ));
+                            
+                            constDim = 'Y';
+                            
                         }
                         
-                        
-                        
-                        //X-Y Dim
                         else if(nodeOneZ == nodeTwoZ){
-                            //Keep the dimensions of the resized images constant (always in the XY plane)
-                            startingX2DSample = NewSegment.x_start;
-                            endingX2DSample = NewSegment.x_end;
-                            startingY2DSample = NewSegment.y_start;
-                            endingY2DSample = NewSegment.y_end;
                             
-                            int pos = 0;
-                            for(int k = NewSegment.y_start; k <= NewSegment.y_end; k++){
-                                int offSetYZ = xDim*k + xDim*yDim*nodeOneZ;
-                                for(int i = NewSegment.x_start; i <= NewSegment.x_end; i++){
-                                    int offSet = offSetYZ + i;
-                                    newData[pos] = image1d[offSet];
+                            NewSegment.x_start = min(nodeOneX, nodeTwoX);
+                            NewSegment.x_end = ceil(max(nodeOneX, nodeTwoX));
+                            NewSegment.y_start = min(nodeOneY, nodeTwoY);
+                            NewSegment.y_end = ceil(max(nodeOneY, nodeTwoY));
+                            
+                            constDim = 'Z';
+                        }
+                        
+                        //Get the offsets
+                        
+                        unsigned char newData[((int)NewSegment.x_end - (int)NewSegment.x_start +1)*((int)NewSegment.y_end- (int)NewSegment.y_start + 1)];
+                        int pos = 0;
+                        if(constDim == 'X'){
+                            
+                            for(int z = NewSegment.y_start; z < NewSegment.y_end; z++){
+                                int offSetZ = xDim*yDim*z;
+                                for(int y = NewSegment.x_start; y < NewSegment.z_end; y++){
+                                    int offSetXYZ = NewSegment.originalx1 + y*xDim + offSetZ;
+                                    newData[pos] = image1d[offSetXYZ];
                                     pos++;
                                 }
                             }
+                            
+                            
+                        }
+                        else if(constDim == 'Y'){
+                            for(int z = NewSegment.y_start; z < NewSegment.y_end; z++){
+                                int offSetZ = xDim*yDim*z;
+                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                    int offSetXYZ = x + xDim*NewSegment.originaly1 + offSetZ;
+                                    newData[pos] = image1d[offSetXYZ];
+                                    pos++;
+                                }
+                            }
+                            
+                            
+                        }
+                        else if(constDim == 'Z'){
+                            for(int y = NewSegment.y_start; y < NewSegment.y_end; y++){
+                                int offSetY = xDim*y;
+                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                    int offSetXYZ = x + offSetY + xDim*yDim*NewSegment.originalz1;
+                                    newData[pos] = image1d[offSetXYZ];
+                                    pos++;
+                                }
+                            }
+                            
                         }
                         
-                        //Linear Interpolation
-                        double ratiox = ((double)((int)endingX2DSample-(int)startingX2DSample+1))/((double)TwoDXDim);
-                        double ratioy = ((double)((int)endingY2DSample-(int)startingY2DSample+1))/((double)TwoDYDim);
+                        double ratiox = ((double)((int)NewSegment.x_end-(int)NewSegment.x_start+1))/((double)TwoDXDim);
+                        double ratioy = ((double)((int)NewSegment.y_end-(int)NewSegment.y_start+1))/((double)TwoDYDim);
                         int newCount = 0;
-                        
-                        int newXDim = endingX2DSample - startingX2DSample +1;
-                        int newYDim = endingY2DSample - startingY2DSample +1;
+                        int newXDim = NewSegment.x_end - NewSegment.x_start +1;
+                        int newYDim = NewSegment.y_end - NewSegment.y_start +1;
                         int posCounter = 0;
                         unsigned char resizedData[TwoDImageArraySize];
+                        
                         for(int j = 0; j <= TwoDYDim -1; j++){
                             int j2low = floor(j*ratioy);
                             int j2high = floor((j+1)*ratioy-1);
@@ -1985,36 +2119,38 @@ bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier,
                                 posCounter++;
                             }
                         }
-                        float *features2D = new float[TwoDImageArraySize];
-                        for(int i = 0; i <= TwoDImageArraySize; i++){
-                            features2D[i] = (float)resizedData[i];
-                        }
-                        int classifierResult = TwoDClassifier.classifyASample(features2D, TwoDImageArraySize);
-                        cout << "The result after 2D classification :: " << classifierResult << endl;
-                        if(classifierResult == 1){
-                            cout << "Case 1. Connecting from ____ to _____" << endl;
-                        }
-                        else if(classifierResult == 2){
-                            cout << "Case 2. Connecting from ____ to _____" << endl;
-                        }
-                        else{
-                            cout << "Case 0. Not Connecting" << endl;
-                        }
+                        cout << "The data is :: " << endl;
                         
+                        float *ClassifyArray = new float [TwoDImageArraySize];
+                        
+                        for(int q = 0; q < TwoDImageArraySize; q++){
+                            cout << (int)resizedData[q] << endl;
+                            ClassifyArray[q] = resizedData[q];
+                            // cout << ClassifyArray[q] << endl;
+                        }
+                        cout << endl;
+                        
+                        int classifierResult = TwoDClassifier->classifyASample(ClassifyArray, TwoDImageArraySize, pmodel2);
+                        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
                     }
-                    
-                    //3D (All dimensions are not constant
-                    else if((nodeOneX != nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ != nodeTwoZ) || (nodeOneX != nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ != nodeTwoZ) || (nodeOneX != nodeTwoX && nodeOneY != nodeTwoY && nodeOneZ != nodeTwoZ)){
+                    //Three D Case
+                    else{
                         
-                        unsigned char newData[(NewSegment.x_end - NewSegment.x_start +1)*(NewSegment.y_end - NewSegment.y_start +1)*(NewSegment.z_end-NewSegment.z_start+1)];
+                        NewSegment.x_start = min(nodeOneX, nodeTwoX);
+                        NewSegment.x_end = ceil(max(nodeOneX, nodeTwoX));
+                        NewSegment.y_start = min(nodeOneY, nodeTwoY);
+                        NewSegment.y_end = ceil(max(nodeOneY, nodeTwoY));
+                        NewSegment.z_start = min(nodeOneZ, nodeTwoZ);
+                        NewSegment.z_end = ceil(max(nodeOneZ, nodeTwoZ));
+                        unsigned char newData[((int)NewSegment.x_end - (int)NewSegment.x_start +1)*((int)NewSegment.y_end - (int)NewSegment.y_start + 1)* ((int)NewSegment.z_end - (int)NewSegment.z_start + 1)];
                         int pos = 0;
-                        for(int k = NewSegment.z_start; k <= NewSegment.z_end; k++){
-                            int offSetZ = xDim*yDim*k;
-                            for(int j = NewSegment.y_start; j <= NewSegment.y_end; j++){
-                                int offSetYZ = offSetZ + xDim*j;
-                                for(int i = NewSegment.x_start; i <= NewSegment.x_end; i++){
-                                    int offSet = offSetYZ + i;
-                                    newData[pos] = image1d[offSet];
+                        for(int z = NewSegment.z_start; z < NewSegment.z_end; z++){
+                            int offSetZ = xDim*yDim*z;
+                            for(int y = NewSegment.y_start; y < NewSegment.y_end; y++){
+                                int offSetYZ = xDim*y + offSetZ;
+                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                    int offSetXYZ = x + offSetYZ;
+                                    newData[pos] = image1d[offSetXYZ];
                                     pos++;
                                 }
                             }
@@ -2028,7 +2164,7 @@ bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier,
                         double ratiox = ((double)((int)NewSegment.x_end-(int)NewSegment.x_start +1))/((double) ThreeDXDim);
                         double ratioy = ((double)((int)NewSegment.y_end-(int)NewSegment.y_start +1))/((double) ThreeDYDim);
                         double ratioz = ((double)((int)NewSegment.z_end-(int)NewSegment.z_start +1))/((double) ThreeDZDim);
-
+                        
                         unsigned char resizedData2[ThreeDImageArraySize];
                         for(int k = 0; k <= ThreeDZDim-1; k++){
                             
@@ -2099,41 +2235,28 @@ bool classifySamples(SVMClassifier OneDClassifier, SVMClassifier TwoDClassifier,
                             }
                         }
                         
-                        float *features3D = new float[ThreeDImageArraySize];
-                        for(int i = 0; i <= ThreeDImageArraySize; i++){
-                            features3D[i] = (float)resizedData2[i];
-                        }
-                        int classifierResult = ThreeDClassifier.classifyASample(features3D, ThreeDImageArraySize);
-                        cout << "The result after 3DClassification :: " << classifierResult << endl;
-                        if(classifierResult == 1){
-                            cout << "Case 1. Connecting from ____ to _____" << endl;
-                        }
-                        else if(classifierResult == 2){
-                            cout << "Case 2. Connecting from ____ to _____" << endl;
-                        }
-                        else if(classifierResult == 3){
-                            cout << "Case 3. Connecting from ____ to _____" << endl;
-                        }
-                        else if(classifierResult == 4){
-                            cout << "Case 4. Connecting from ____ to _____" << endl;
-                        }
-                        else{
-                            cout << "Case 0. Not Connecting" << endl;
-                        }
+                        cout << "The data is :: " << endl;
                         
+                        float *ClassifyArray = new float [ThreeDImageArraySize];
                         
+                        for(int q = 0; q < ThreeDImageArraySize; q++){
+                            cout << (int)resizedData2[q] << endl;
+                            ClassifyArray[q] = resizedData2[q];
+                            // cout << ClassifyArray[q] << endl;
+                        }
+                        cout << endl;
+                        
+                        int classifierResult = ThreeDClassifier->classifyASample(ClassifyArray, ThreeDImageArraySize, pmodel3);
+                        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+
+
                     }
-                
-                    
                     
                 }
-                
             }
         }
-        
     }
-    
-    
+
 }
 
 
