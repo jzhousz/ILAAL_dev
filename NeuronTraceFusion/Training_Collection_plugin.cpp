@@ -1837,6 +1837,8 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
     int xDim = tImage->getXDim();
     int yDim = tImage->getYDim();
     int zDim = tImage->getZDim();
+    
+    vector<NeuronSWC> positiveNodes;
 
     NeuronTree neuron1;
     neuron1 = readSWC_file(inputFileName);
@@ -1926,7 +1928,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         int pos = 0;
                         //To determine offset
                         if(changingDim == 'X'){
-                            for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                            for(int x = NewSegment.x_start; x <= NewSegment.x_end; x++){
                                 int offsetXYZ = x + xDim*NewSegment.originaly1 + xDim*yDim*NewSegment.originalz1;
                                 newData[pos] = image1d[offsetXYZ];
                                 pos++;
@@ -1934,7 +1936,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             
                         }
                         else if(changingDim == 'Y'){
-                            for(int y = NewSegment.x_start; y < NewSegment.x_end; y++){
+                            for(int y = NewSegment.x_start; y <= NewSegment.x_end; y++){
                                 int offsetXYZ = NewSegment.originalx1 + xDim*y + xDim*yDim*NewSegment.originalz1;
                                 newData[pos] = image1d[offsetXYZ];
                                 pos++;
@@ -1942,7 +1944,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         }
                         
                         else if(changingDim == 'Z'){
-                            for(int z = NewSegment.x_start; z < NewSegment.x_end; z++){
+                            for(int z = NewSegment.x_start; z <= NewSegment.x_end; z++){
                                 int offsetXYZ = NewSegment.originalx1 + xDim*NewSegment.originaly1 + xDim*yDim*z;
                                 newData[pos] = image1d[offsetXYZ];
                                 pos++;
@@ -1971,11 +1973,11 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             for(int i1 = i2low; i1<=i2high; i1++){
                                 int pos = i1;
                                 s += (unsigned int)newData[pos];
-                                cout << "s = " << s << " pos = " << pos << endl;
+                            //    cout << "s = " << s << " pos = " << pos << endl;
                             }
                             V3DLONG result = s/(cubeVolume);
-                            cout << "Cube Volume = " << cubeVolume << endl;
-                            cout << "result (Calc average)" << result << endl;
+                         //   cout << "Cube Volume = " << cubeVolume << endl;
+                          //  cout << "result (Calc average)" << result << endl;
                             resizedData2[posCounter] = (unsigned char) result;
                             posCounter++;
                         }
@@ -1993,11 +1995,32 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
 
                         int classifierResult = OneDClassifier->classifyASample(ClassifyArray, OneDImageArraySize, pmodel1);
                         cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+                        if(classifierResult != 0){
+                            bool addOne = true;
+                            bool addTwo = true;
+                            for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
+                                if(it->n == thisNeuron.n){
+                                    addOne = false;
+                                }
+                                if(it->n == thatNeuron.n){
+                                    addTwo = false;
+                                }
+                            }
+                            if(addOne == true){
+                                positiveNodes.push_back(thisNeuron);
+                            }
+                            if(addTwo == true){
+                                positiveNodes.push_back(thatNeuron);
+                            }
+                        }
+
                     }
                     
                     else if((nodeOneX == nodeTwoX) || (nodeOneY == nodeTwoY) || (nodeOneZ == nodeTwoZ)){
                         
                         char constDim = '0';
+                        NewSegment.z_start =0;
+                        NewSegment.z_end = 0;
                         
                         if(nodeOneX == nodeTwoX){
                             
@@ -2032,13 +2055,13 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         
                         //Get the offsets
                         
-                        unsigned char newData[((int)NewSegment.x_end - (int)NewSegment.x_start +1)*((int)NewSegment.y_end- (int)NewSegment.y_start + 1)];
+                        unsigned char newData[((int)NewSegment.x_end - (int)NewSegment.x_start +1)*((int)NewSegment.y_end - (int)NewSegment.y_start + 1)];
                         int pos = 0;
                         if(constDim == 'X'){
                             
-                            for(int z = NewSegment.y_start; z < NewSegment.y_end; z++){
+                            for(int z = NewSegment.y_start; z <= NewSegment.y_end; z++){
                                 int offSetZ = xDim*yDim*z;
-                                for(int y = NewSegment.x_start; y < NewSegment.z_end; y++){
+                                for(int y = NewSegment.x_start; y <= NewSegment.x_end; y++){
                                     int offSetXYZ = NewSegment.originalx1 + y*xDim + offSetZ;
                                     newData[pos] = image1d[offSetXYZ];
                                     pos++;
@@ -2048,9 +2071,9 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             
                         }
                         else if(constDim == 'Y'){
-                            for(int z = NewSegment.y_start; z < NewSegment.y_end; z++){
+                            for(int z = NewSegment.y_start; z <= NewSegment.y_end; z++){
                                 int offSetZ = xDim*yDim*z;
-                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                for(int x = NewSegment.x_start; x <= NewSegment.x_end; x++){
                                     int offSetXYZ = x + xDim*NewSegment.originaly1 + offSetZ;
                                     newData[pos] = image1d[offSetXYZ];
                                     pos++;
@@ -2060,9 +2083,9 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             
                         }
                         else if(constDim == 'Z'){
-                            for(int y = NewSegment.y_start; y < NewSegment.y_end; y++){
+                            for(int y = NewSegment.y_start; y <= NewSegment.y_end; y++){
                                 int offSetY = xDim*y;
-                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                for(int x = NewSegment.x_start; x <= NewSegment.x_end; x++){
                                     int offSetXYZ = x + offSetY + xDim*yDim*NewSegment.originalz1;
                                     newData[pos] = image1d[offSetXYZ];
                                     pos++;
@@ -2109,12 +2132,12 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                                     for(int i1 = i2low; i1 <= i2high; i1++){
                                         int pos = j1*newXDim + i1;
                                         s += (unsigned int)newData[pos];
-                                        cout << "s = " << s << " pos = " << pos << endl;
+                                        //cout << "s = " << s << " pos = " << pos << endl;
                                     }
                                 }
                                 V3DLONG result = s/cubeVolume;
-                                cout << "Cube volume :: " << cubeVolume << endl;
-                                cout << "Results :: " << result << endl;
+                               // cout << "Cube volume :: " << cubeVolume << endl;
+                               // cout << "Results :: " << result << endl;
                                 resizedData[posCounter] = (unsigned char) result;
                                 posCounter++;
                             }
@@ -2132,6 +2155,51 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         
                         int classifierResult = TwoDClassifier->classifyASample(ClassifyArray, TwoDImageArraySize, pmodel2);
                         cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+                        
+                        cout << "The original coordinates are :: (" << NewSegment.originalx1 << ", " << NewSegment.originaly1 << ", " << NewSegment.originalz1 << "), (" << NewSegment.originalx2 << ", " << NewSegment.originaly2 << ", " << NewSegment.originalz2 << ")" << endl;
+                        
+                        Image4DSimple* newImageResized = new Image4DSimple;
+                        
+                        newImageResized->setData(resizedData, TwoDXDim, TwoDYDim, 1, tImage->getCDim(), tImage->getDatatype());
+                        
+                        stringstream ss;
+                        ss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+                        string str = ss.str();
+                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDResized" + str + ".v3draw";
+                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
+                            cout << "Image Saved" << endl;
+                        }
+                        Image4DSimple* newImage = new Image4DSimple;
+                        
+                        newImage->setData(newData, NewSegment.x_end - NewSegment.x_start +1, NewSegment.y_end - NewSegment.y_start + 1, NewSegment.z_start - NewSegment.z_end + 1, tImage->getCDim(), tImage->getDatatype());
+                        
+                        stringstream sss;
+                        sss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+                        string str2 = sss.str();
+                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDOriginal" + str2 + ".v3draw";
+                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
+                            cout << "Image Saved" << endl;
+                        }
+                        if(classifierResult != 0){
+                            bool addOne = true;
+                            bool addTwo = true;
+                            for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
+                                if(it->n == thisNeuron.n){
+                                    addOne = false;
+                                }
+                                if(it->n == thatNeuron.n){
+                                    addTwo = false;
+                                }
+                            }
+                            if(addOne == true){
+                                positiveNodes.push_back(thisNeuron);
+                            }
+                            if(addTwo == true){
+                                positiveNodes.push_back(thatNeuron);
+                            }
+                        }
+
+                        
                     }
                     //Three D Case
                     else{
@@ -2144,11 +2212,11 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         NewSegment.z_end = ceil(max(nodeOneZ, nodeTwoZ));
                         unsigned char newData[((int)NewSegment.x_end - (int)NewSegment.x_start +1)*((int)NewSegment.y_end - (int)NewSegment.y_start + 1)* ((int)NewSegment.z_end - (int)NewSegment.z_start + 1)];
                         int pos = 0;
-                        for(int z = NewSegment.z_start; z < NewSegment.z_end; z++){
+                        for(int z = NewSegment.z_start; z <= NewSegment.z_end; z++){
                             int offSetZ = xDim*yDim*z;
-                            for(int y = NewSegment.y_start; y < NewSegment.y_end; y++){
+                            for(int y = NewSegment.y_start; y <= NewSegment.y_end; y++){
                                 int offSetYZ = xDim*y + offSetZ;
-                                for(int x = NewSegment.x_start; x < NewSegment.x_end; x++){
+                                for(int x = NewSegment.x_start; x <= NewSegment.x_end; x++){
                                     int offSetXYZ = x + offSetYZ;
                                     newData[pos] = image1d[offSetXYZ];
                                     pos++;
@@ -2218,15 +2286,15 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                                             for(int i1 = i2low; i1<=i2high; i1++){
                                                 int pos = k1*(newXDim*newYDim) + j1*newXDim+ i1;
                                                 s += (unsigned int)newData[pos];
-                                                cout << "s = " << s << "  pos = " << pos << endl;
+                                                //cout << "s = " << s << "  pos = " << pos << endl;
                                             }
                                         }
                                     }
                                     //V3DLONG adjustedS = s;// + (it->z_start*(xdim*ydim)+it->y_start*xdim+it->x_start);
                                     //if(cubeVolume == 0) cubeVolume = 1;
                                     V3DLONG result = s/(cubeVolume);
-                                    cout << "cube volume :: " << cubeVolume << endl;
-                                    cout << "result (Calc Average) :: " << result << endl;
+                                    //cout << "cube volume :: " << cubeVolume << endl;
+                                    //cout << "result (Calc Average) :: " << result << endl;
                                     //cout << "Counter check :: " << posCounter << endl;
                                     resizedData2[posCounter] = (unsigned char) result;
                                     posCounter++;
@@ -2247,14 +2315,59 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         cout << endl;
                         
                         int classifierResult = ThreeDClassifier->classifyASample(ClassifyArray, ThreeDImageArraySize, pmodel3);
-                        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+                        cout << endl << "The Result After classification :: " << classifierResult << endl;
+                        cout << "The original coordinates are :: (" << NewSegment.originalx1 << ", " << NewSegment.originaly1 << ", " << NewSegment.originalz1 << "), (" << NewSegment.originalx2 << ", " << NewSegment.originaly2 << ", " << NewSegment.originalz2 << ")" << endl;
 
-
+                        Image4DSimple* newImageResized = new Image4DSimple;
+                        
+                        newImageResized->setData(resizedData2, ThreeDXDim, ThreeDYDim, ThreeDZDim, tImage->getCDim(), tImage->getDatatype());
+                        
+                        stringstream ss;
+                        ss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+                        string str = ss.str();
+                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDResized" + str + ".v3draw";
+                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
+                            cout << "Image Saved" << endl;
+                        }
+                        Image4DSimple* newImage = new Image4DSimple;
+                        
+                        newImage->setData(newData, NewSegment.x_end - NewSegment.x_start +1, NewSegment.y_end - NewSegment.y_start + 1, NewSegment.z_start - NewSegment.z_end + 1, tImage->getCDim(), tImage->getDatatype());
+                        
+                        stringstream sss;
+                        sss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+                        string str2 = sss.str();
+                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDOriginal" + str2 + ".v3draw";
+                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
+                            cout << "Image Saved" << endl;
+                        }
+                        if(classifierResult != 0){
+                            bool addOne = true;
+                            bool addTwo = true;
+                            for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
+                                if(it->n == thisNeuron.n){
+                                    addOne = false;
+                                }
+                                if(it->n == thatNeuron.n){
+                                    addTwo = false;
+                                }
+                            }
+                            if(addOne == true){
+                                positiveNodes.push_back(thisNeuron);
+                            }
+                            if(addTwo == true){
+                                positiveNodes.push_back(thatNeuron);
+                            }
+                        }
                     }
                     
                 }
             }
         }
+    }
+    
+    //Generate the file
+    for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
+        outputFile << it->n << " " << it->type << " " << it->x << " " << it->y << " " << it->z << " " << it->r << " " << it->pn << endl;
     }
 
 }
