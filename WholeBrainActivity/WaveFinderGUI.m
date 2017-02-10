@@ -1,3 +1,11 @@
+% WaveFinderGUI.m
+% 
+% Created by Varshini Guddanti on 11/2/2016.
+%
+%
+
+
+
 function varargout = WaveFinderGUI(varargin)
 % WAVEFINDERGUI MATLAB code for WaveFinderGUI.fig
 %      SIMPLE_G5UI, by itself, creates a new WAVEFINDERGUI or raises the existing
