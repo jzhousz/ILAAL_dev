@@ -64,5 +64,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
 
 int prePredictedValue(ROISegment thisSegment);
 
+bool connectOrNot(Image4DSimple* tImage, NeuronSWC node1, NeuronSWC node2, int scaledX1D, int scaledX2D, int scaledY2D, int scaledX3D, int scaledY3D, int scaledZ3D, SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifier, SVMClassifier* ThreeDClassifier);
+
 #endif
 
