@@ -49,6 +49,8 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
 
 bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifier, SVMClassifier* ThreeDClassifier, int OneDImageArraySize, int TwoDImageArraySize, int ThreeDImageArraySize, int TwoDXDim, int TwoDYDim, int ThreeDXDim, int ThreeDYDim, int ThreeDZDim, V3DPluginCallback2 &callback,  QWidget *parent);
 
+int prePredictedValue(ROISegment thisSegment);
+
 QStringList Training::menulist() const
 {
 	return QStringList() 
@@ -456,8 +458,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                                 
                                 NewSegment.y_start = min(thisNeuron.z, thatNeuron.z);
                                 NewSegment.y_end = ceil(max(thisNeuron.z, thatNeuron.z));
-    //                            sumx2D += (max(nodeOneX, nodeTwoX) - min(nodeOneX, nodeTwoX)) +1;
-    //                            sumy2D += (max(nodeOneY, nodeTwoY) - min(nodeOneY, nodeTwoY)) +1;
+                                
                                 sumx2D += (NewSegment.x_end - NewSegment.x_start) +1;
                                 sumy2D += (NewSegment.y_end - NewSegment.y_start) +1;
                             }
@@ -489,8 +490,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                                 
                                 NewSegment.y_start = min(thisNeuron.y, thatNeuron.y);
                                 NewSegment.y_end = ceil(max(thisNeuron.y, thatNeuron.y));
-    //                            sumx2D += ((max(nodeOneX, nodeTwoX) - min(nodeOneX, nodeTwoX)) +1;
-    //                            sumy2D += (max(nodeOneZ, nodeTwoZ) - min(nodeOneZ, nodeTwoZ)) +1;
+
                                 sumx2D += (NewSegment.x_end - NewSegment.x_start) +1;
                                 sumy2D += (NewSegment.y_end - NewSegment.y_start) +1;
                             }
@@ -498,9 +498,6 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                         if(shouldAdd == true){
                             cout << "Added " << (NewSegment.x_end - NewSegment.x_start) +1 << " " << (NewSegment.y_end - NewSegment.y_start) +1 << " " << (NewSegment.z_end - NewSegment.z_start) +1 << endl;
                             cout << "From :: " << NewSegment.x_end << " - " << NewSegment.x_start << ", " << NewSegment.y_end << " - " << NewSegment.y_start << " + 1, " << NewSegment.z_start << " - " << NewSegment.z_end << " + 1" << endl;
-    //                        sumx += (NewSegment.x_end - NewSegment.x_start) +1;
-    //                        sumy += (NewSegment.y_end - NewSegment.y_start) +1;
-
                             
                             NewSegment.z_start = 0; //Just set to 0 since 2D
                             NewSegment.z_end = 0;
@@ -637,9 +634,9 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         int newX = 0;
         unsigned char newData[(int)it->x_end - (int)it->x_start +1];
         
-        if((int)it->originaly1 - (int)it->originaly2 == 0 && (int)it->originalz1 - (int)it->originalz2== 0){
+        if((int)it->originaly1 - (int)it->originaly2 == 0 && (int)it->originalz1 - (int)it->originalz2 == 0){
             int offSetYZ = it->originalz1*ydim*xdim + it->originaly1*xdim;
-            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
+            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim from original X coords
                 int totalOffset = i + offSetYZ;
                 cout << "Grabbing data from positions :: " << totalOffset << endl;
                 newData[newX] = image1d[totalOffset];
@@ -649,7 +646,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         
         if((int)it->originalx1 - (int)it->originalx2 == 0 && (int)it->originalz1 - (int)it->originalz2 == 0){
             int offSetXZ = it->originalz1*ydim*xdim + it->originalx1;
-            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
+            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim from original y coords
                 int totalOffset = i*xdim + offSetXZ;
                 cout << "Grabbing data from positions :: " << totalOffset << endl;
                 newData[newX] = image1d[totalOffset];
@@ -659,7 +656,7 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         
         if((int)it->originalx1 - (int)it->originalx2 == 0 && (int)it->originaly1 - (int)it->originaly2 == 0){
             int offSetXY = it->originaly1*xdim + it->originalx1;
-            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim
+            for(int i = (int)it->x_start; i <= (int)it->x_end; i++){    //1D data --> Only populate the X-Dim from original z coords
                 int totalOffset = i*ydim*xdim + offSetXY;
                 cout << "Grabbing data from positions :: " << totalOffset << endl;
                 newData[newX] = image1d[totalOffset];
@@ -1524,7 +1521,6 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
         }
         
         //One case: x_start to x_end. The image data has been adjusted before so that all the info is stored in the 'x' variables
-        //There are 2 cases: true or false. Still need a way to get false data where targets1D[oneDPos1] = 0
         targets1D[oneDPos1] = 1;
         
         oneDPos1++;
@@ -1785,8 +1781,8 @@ bool setUpTrainingData(vector<Image4DSimple*> OneDImageData, vector<Image4DSimpl
     cout << "Number of 1D cubes: " << numberCubes1D << endl;
     cout << "Number of 2D cubes: " << numberCubes2D << endl;
     cout << "Number of 3D cubes: " << numberCubes3D << endl << "Number of Features: " << numOfFeatures3D << endl;
-    cout << "Size of the 2D Positive Image Vector :: " << TwoDImageData.size() <<endl;
-    cout << "Size of the 3D Positive Image Vector :: " << ThreeDImageData.size() <<endl;
+    cout << "Size of the 2D Positive Image Vector :: " << TwoDImageData.size() << endl;
+    cout << "Size of the 3D Positive Image Vector :: " << ThreeDImageData.size() << endl;
     
     cout << "Size of the 2D Positive ROI Vector :: " << ROIs2D.size() << endl;
     cout << "Size of the 3D Positive ROI Vector :: " << ROIs3D.size() << endl;
@@ -1842,14 +1838,6 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
 
     NeuronTree neuron1;
     neuron1 = readSWC_file(inputFileName);
-    
-    vector<ROISegment> ROIs3D;
-    vector<ROISegment> ROIs2D;  //May Delete these
-    vector<ROISegment> ROIs1D;
-    
-    vector<Image4DSimple> OneDImages;
-    vector<Image4DSimple> TwoDImages;       //May Delete these
-    vector<Image4DSimple> ThreeDImages;
     
     for(int i = 0; i < neuron1.listNeuron.size(); i++){
         NeuronSWC thisNeuron = neuron1.listNeuron.at(i);
@@ -1987,7 +1975,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         float *ClassifyArray = new float [OneDImageArraySize];
                         
                         for(int q = 0; q < OneDImageArraySize; q++){
-                            cout << (int)resizedData2[q] << endl;
+                        //    cout << (int)resizedData2[q] << endl;
                             ClassifyArray[q] = resizedData2[q];
                            // cout << ClassifyArray[q] << endl;
                         }
@@ -2001,9 +1989,11 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
                                 if(it->n == thisNeuron.n){
                                     addOne = false;
+                                    break;
                                 }
                                 if(it->n == thatNeuron.n){
                                     addTwo = false;
+                                    break;
                                 }
                             }
                             if(addOne == true){
@@ -2147,7 +2137,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         float *ClassifyArray = new float [TwoDImageArraySize];
                         
                         for(int q = 0; q < TwoDImageArraySize; q++){
-                            cout << (int)resizedData[q] << endl;
+                         //   cout << (int)resizedData[q] << endl;
                             ClassifyArray[q] = resizedData[q];
                             // cout << ClassifyArray[q] << endl;
                         }
@@ -2186,9 +2176,11 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                             for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
                                 if(it->n == thisNeuron.n){
                                     addOne = false;
+                                    break;
                                 }
                                 if(it->n == thatNeuron.n){
                                     addTwo = false;
+                                    break;
                                 }
                             }
                             if(addOne == true){
@@ -2308,7 +2300,7 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         float *ClassifyArray = new float [ThreeDImageArraySize];
                         
                         for(int q = 0; q < ThreeDImageArraySize; q++){
-                            cout << (int)resizedData2[q] << endl;
+                           // cout << (int)resizedData2[q] << endl;
                             ClassifyArray[q] = resizedData2[q];
                             // cout << ClassifyArray[q] << endl;
                         }
@@ -2340,15 +2332,19 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
                             cout << "Image Saved" << endl;
                         }
+                        
+                        //For now, just veriy that the segment is not classified as 'negative'
                         if(classifierResult != 0){
                             bool addOne = true;
                             bool addTwo = true;
                             for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
                                 if(it->n == thisNeuron.n){
                                     addOne = false;
+                                    break;
                                 }
                                 if(it->n == thatNeuron.n){
                                     addTwo = false;
+                                    break;
                                 }
                             }
                             if(addOne == true){
@@ -2365,13 +2361,497 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
         }
     }
     
-    //Generate the file
+    //Generate the swc file
     for(vector<NeuronSWC>::iterator it = positiveNodes.begin(); it != positiveNodes.end(); ++it){
         outputFile << it->n << " " << it->type << " " << it->x << " " << it->y << " " << it->z << " " << it->r << " " << it->pn << endl;
     }
 
 }
 
+
+bool connectOrNot(Image4DSimple* tImage, NeuronSWC node1, NeuronSWC node2, int scaledX1D, int scaledX2D, int scaledY2D, int scaledX3D, int scaledY3D, int scaledZ3D, SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifier, SVMClassifier* ThreeDClassifier){
+    
+    //First extract the two nodes.
+    
+    ROISegment thisSegment;
+    
+    thisSegment.originalx1 = node1.x;
+    thisSegment.originalx2 = node2.x;
+    thisSegment.originaly1 = node1.y;
+    thisSegment.originaly2 = node2.y;
+    thisSegment.originalz1 = node1.z;
+    thisSegment.originalz2 = node2.z;
+    
+    thisSegment.x_start = 0;
+    thisSegment.y_start = 0;
+    thisSegment.z_start = 0;
+    
+    thisSegment.x_end = 0;
+    thisSegment.y_end = 0;
+    thisSegment.z_end = 0;
+    
+    //Get info from the image
+    
+    unsigned char* image1d = tImage->getRawData();
+    int xDim = tImage->getXDim();
+    int yDim = tImage->getYDim();
+    int zDim = tImage->getZDim();
+    
+    //Next determine if 1D, 2D, or 3D
+    
+    if((thisSegment.originalx1 == thisSegment.originalx2) && (thisSegment.originaly1 == thisSegment.originaly2) && (thisSegment.originalz1 == thisSegment.originalz2)){
+        return true;
+    }
+    
+    //1D Case
+    else if((thisSegment.originalx1 == thisSegment.originalx2 && thisSegment.originaly1 == thisSegment.originaly2) || (thisSegment.originalx1 == thisSegment.originalx2 && thisSegment.originalz1 == thisSegment.originalz2) || (thisSegment.originaly1 == thisSegment.originaly2 && thisSegment.originalz1 == thisSegment.originalz2)){
+     
+        //XDim changed
+        char changingDim = '0';
+        
+        if(thisSegment.originaly1 == thisSegment.originaly2 && thisSegment.originalz1 == thisSegment.originalz2){
+            thisSegment.x_start = min(thisSegment.originalx1, thisSegment.originalx2);
+            thisSegment.x_end = ceil(max(thisSegment.originalx1, thisSegment.originalx2));
+            changingDim = 'X';
+        }
+        
+        //YDIM CHANGES
+        else if(thisSegment.originalx1 == thisSegment.originalx2 && thisSegment.originalz1 == thisSegment.originalz2){
+            thisSegment.x_start = min(thisSegment.originaly1, thisSegment.originaly2);
+            thisSegment.x_end = ceil(max(thisSegment.originaly1, thisSegment.originaly2));
+            changingDim = 'Y';
+        }
+        //ZDIM CHANGES
+        else if(thisSegment.originalx1 == thisSegment.originalx2 && thisSegment.originaly1 == thisSegment.originaly2){
+            thisSegment.x_start = min(thisSegment.originalz1, thisSegment.originalz2);
+            thisSegment.x_end = ceil(max(thisSegment.originalz1, thisSegment.originalz2));
+            changingDim = 'Z';
+        }
+        
+        unsigned char newData[(int)thisSegment.x_end - (int)thisSegment.x_start +1];
+        
+        //Get the image data
+        
+        int pos = 0;
+        if(changingDim == 'X'){
+            for(int x = thisSegment.x_start; x <= thisSegment.x_end; x++){
+                int offsetXYZ = x + xDim*thisSegment.originaly1 + xDim*yDim*thisSegment.originalz1;
+                newData[pos] = image1d[offsetXYZ];
+                pos++;
+            }
+            
+        }
+        else if(changingDim == 'Y'){
+            for(int y = thisSegment.x_start; y <= thisSegment.x_end; y++){
+                int offsetXYZ = thisSegment.originalx1 + xDim*y + xDim*yDim*thisSegment.originalz1;
+                newData[pos] = image1d[offsetXYZ];
+                pos++;
+            }
+        }
+        
+        else if(changingDim == 'Z'){
+            for(int z = thisSegment.x_start; z <= thisSegment.x_end; z++){
+                int offsetXYZ = thisSegment.originalx1 + xDim*thisSegment.originaly1 + xDim*yDim*z;
+                newData[pos] = image1d[offsetXYZ];
+                pos++;
+            }
+        }
+        
+        //Have the data for the sub-image. Now resize so it will be able to be fed into the 1D classifier
+        
+        double ratiox = ((double)((int)thisSegment.x_end-(int)thisSegment.x_start +1))/((double)scaledX1D);
+        int newXDim = thisSegment.x_end - thisSegment.x_start +1;
+        int posCounter = 0;
+        
+        int newCount = 0;
+        unsigned char resizedData2[scaledX1D];
+        
+        for(int i = 0; i <= scaledX1D-1; i++){
+            int i2low = floor(i*ratiox);
+            int i2high = floor((i+1)*ratiox-1);
+            if(i2high < i2low){
+                i2high = i2low;
+            }
+            if(i2high > newXDim -1){
+                i2high = newXDim -1;
+            }
+            int iw = i2high - i2low +1;
+            double cubeVolume = iw;
+            int s = 0;
+            
+            for(int i1 = i2low; i1<=i2high; i1++){
+                int pos = i1;
+                s += (unsigned int)newData[pos];
+                //    cout << "s = " << s << " pos = " << pos << endl;
+            }
+            V3DLONG result = s/(cubeVolume);
+            //   cout << "Cube Volume = " << cubeVolume << endl;
+            //  cout << "result (Calc average)" << result << endl;
+            resizedData2[posCounter] = (unsigned char) result;
+            posCounter++;
+        }
+        
+        cout << "The data is :: " << endl;
+        
+        float *ClassifyArray = new float [scaledX1D];
+        
+        for(int q = 0; q < scaledX1D; q++){
+            ClassifyArray[q] = resizedData2[q];
+        }
+        
+        int classifierResult = OneDClassifier->classifyASample(ClassifyArray, scaledX1D, pmodel1);
+        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+
+        if(classifierResult == 0){
+            return false;
+        }
+        else{
+            return true;
+        }
+        
+    }
+    
+    else if((thisSegment.originalx1 == thisSegment.originalx2) || (thisSegment.originaly1 == thisSegment.originaly2) || (thisSegment.originalz1 == thisSegment.originalz2)){
+        
+        //For 2D we need to find what the classifier SHOULD return. If classifier returns any other value, return false.
+        
+        int returnValue = prePredictedValue(thisSegment);
+        
+        char constDim = '0';
+        thisSegment.z_start =0;
+        thisSegment.z_end = 0;
+        
+        if(thisSegment.originalx1 == thisSegment.originalx2){
+            
+            thisSegment.x_start = min(thisSegment.originaly1, thisSegment.originaly2);
+            thisSegment.x_end = ceil(max(thisSegment.originaly1, thisSegment.originaly2));
+            thisSegment.y_start = min(thisSegment.originalz1, thisSegment.originalz2);
+            thisSegment.y_end = ceil(max(thisSegment.originalz1, thisSegment.originalz2));
+            
+            constDim = 'X';
+            
+        }
+        else if(thisSegment.originaly1 == thisSegment.originaly2){
+            
+            thisSegment.x_start = min(thisSegment.originalx1, thisSegment.originalx2);
+            thisSegment.x_end = ceil(max(thisSegment.originalx1, thisSegment.originalx2));
+            thisSegment.y_start = min(thisSegment.originalz1, thisSegment.originalz2);
+            thisSegment.y_end = ceil(max(thisSegment.originalz1, thisSegment.originalz2));
+            
+            constDim = 'Y';
+            
+        }
+        
+        else if(thisSegment.originalz1 == thisSegment.originalz2){
+            
+            thisSegment.x_start = min(thisSegment.originalx1, thisSegment.originalx2);
+            thisSegment.x_end = ceil(max(thisSegment.originalx1, thisSegment.originalx2));
+            thisSegment.y_start = min(thisSegment.originaly1, thisSegment.originaly2);
+            thisSegment.y_end = ceil(max(thisSegment.originaly1, thisSegment.originaly2));
+            
+            constDim = 'Z';
+        }
+
+        //Extract the data from the original image in 2D
+        
+        unsigned char newData[((int)thisSegment.x_end - (int)thisSegment.x_start +1)*((int)thisSegment.y_end - (int)thisSegment.y_start + 1)];
+        int pos = 0;
+        if(constDim == 'X'){
+            
+            for(int z = thisSegment.y_start; z <= thisSegment.y_end; z++){
+                int offSetZ = xDim*yDim*z;
+                for(int y = thisSegment.x_start; y <= thisSegment.x_end; y++){
+                    int offSetXYZ = thisSegment.originalx1 + y*xDim + offSetZ;
+                    newData[pos] = image1d[offSetXYZ];
+                    pos++;
+                }
+            }
+            
+            
+        }
+        else if(constDim == 'Y'){
+            for(int z = thisSegment.y_start; z <= thisSegment.y_end; z++){
+                int offSetZ = xDim*yDim*z;
+                for(int x = thisSegment.x_start; x <= thisSegment.x_end; x++){
+                    int offSetXYZ = x + xDim*thisSegment.originaly1 + offSetZ;
+                    newData[pos] = image1d[offSetXYZ];
+                    pos++;
+                }
+            }
+            
+            
+        }
+        else if(constDim == 'Z'){
+            for(int y = thisSegment.y_start; y <= thisSegment.y_end; y++){
+                int offSetY = xDim*y;
+                for(int x = thisSegment.x_start; x <= thisSegment.x_end; x++){
+                    int offSetXYZ = x + offSetY + xDim*yDim*thisSegment.originalz1;
+                    newData[pos] = image1d[offSetXYZ];
+                    pos++;
+                }
+            }
+            
+        }
+        
+        double ratiox = ((double)((int)thisSegment.x_end-(int)thisSegment.x_start+1))/((double)scaledX2D);
+        double ratioy = ((double)((int)thisSegment.y_end-(int)thisSegment.y_start+1))/((double)scaledY2D);
+        int newCount = 0;
+        int newXDim = thisSegment.x_end - thisSegment.x_start +1;
+        int newYDim = thisSegment.y_end - thisSegment.y_start +1;
+        int posCounter = 0;
+        unsigned char resizedData[scaledX2D*scaledY2D];
+        
+        for(int j = 0; j <= scaledY2D -1; j++){
+            int j2low = floor(j*ratioy);
+            int j2high = floor((j+1)*ratioy-1);
+            if(j2high < j2low){
+                j2high = j2low;
+            }
+            if(j2high > newYDim -1){
+                j2high = newYDim -1;
+            }
+            int jw = j2high - j2low + 1;
+            
+            for(int i = 0; i <= scaledX2D -1; i++){
+                int i2low = floor(i*ratiox);
+                int i2high = floor((i+1)*ratiox -1);
+                
+                if(i2high < i2low){
+                    i2high = i2low;
+                }
+                if(i2high > newXDim -1){
+                    i2high = newXDim -1;
+                }
+                int iw = i2high - i2low +1;
+                
+                double cubeVolume = double(jw)*iw;
+                int s = 0;
+                
+                for(int j1 = j2low; j1 <= j2high; j1++){
+                    for(int i1 = i2low; i1 <= i2high; i1++){
+                        int pos = j1*newXDim + i1;
+                        s += (unsigned int)newData[pos];
+                        //cout << "s = " << s << " pos = " << pos << endl;
+                    }
+                }
+                V3DLONG result = s/cubeVolume;
+                // cout << "Cube volume :: " << cubeVolume << endl;
+                // cout << "Results :: " << result << endl;
+                resizedData[posCounter] = (unsigned char) result;
+                posCounter++;
+            }
+        }
+        
+        float *ClassifyArray = new float [scaledX2D*scaledY2D];
+        
+        for(int q = 0; q < scaledX2D*scaledY2D; q++){
+            //   cout << (int)resizedData[q] << endl;
+            ClassifyArray[q] = resizedData[q];
+            // cout << ClassifyArray[q] << endl;
+        }
+        cout << endl;
+        
+        int classifierResult = TwoDClassifier->classifyASample(ClassifyArray, scaledX2D*scaledY2D, pmodel2);
+        if (classifierResult == returnValue){
+            return true;
+        }
+        else{
+            return false;
+        }
+        
+    }
+    
+    //three-d case
+    
+    else{
+        
+        int returnValue = prePredictedValue(thisSegment);
+        
+        thisSegment.x_start = min(thisSegment.originalx1, thisSegment.originalx2);
+        thisSegment.x_end = ceil(max(thisSegment.originalx1, thisSegment.originalx2));
+        thisSegment.y_start = min(thisSegment.originaly1, thisSegment.originaly2);
+        thisSegment.y_end = ceil(max(thisSegment.originaly1, thisSegment.originaly2));
+        thisSegment.z_start = min(thisSegment.originalz1, thisSegment.originalz2);
+        thisSegment.z_end = ceil(max(thisSegment.originalz1, thisSegment.originalz2));
+        unsigned char newData[((int)thisSegment.x_end - (int)thisSegment.x_start +1)*((int)thisSegment.y_end - (int)thisSegment.y_start + 1)* ((int)thisSegment.z_end - (int)thisSegment.z_start + 1)];
+        int pos = 0;
+        for(int z = thisSegment.z_start; z <= thisSegment.z_end; z++){
+            int offSetZ = xDim*yDim*z;
+            for(int y = thisSegment.y_start; y <= thisSegment.y_end; y++){
+                int offSetYZ = xDim*y + offSetZ;
+                for(int x = thisSegment.x_start; x <= thisSegment.x_end; x++){
+                    int offSetXYZ = x + offSetYZ;
+                    newData[pos] = image1d[offSetXYZ];
+                    pos++;
+                }
+            }
+        }
+        
+        int newXDim = thisSegment.x_end-thisSegment.x_start + 1;
+        int newYDim = thisSegment.y_end-thisSegment.y_start + 1;
+        int newZDim = thisSegment.z_end-thisSegment.z_start + 1;
+        int posCounter = 0;
+        
+        double ratiox = ((double)((int)thisSegment.x_end-(int)thisSegment.x_start +1))/((double) scaledX3D );
+        double ratioy = ((double)((int)thisSegment.y_end-(int)thisSegment.y_start +1))/((double) scaledY3D);
+        double ratioz = ((double)((int)thisSegment.z_end-(int)thisSegment.z_start +1))/((double) scaledZ3D);
+        
+        unsigned char resizedData2[scaledZ3D*scaledY3D*scaledX3D];
+        for(int k = 0; k <= scaledZ3D-1; k++){
+            
+            int k2low = floor(k*ratioz);// + it->z_start;
+            int k2high = floor((k+1)*ratioz-1);// + it->z_start;
+            
+            if(k2high < k2low){
+                k2high = k2low;
+            }
+            
+            if(k2high > newZDim - 1){
+                k2high = newZDim - 1;
+            }
+            
+            int kw = k2high - k2low +1;
+            
+            for(int j = 0; j <= scaledY3D-1; j++){
+                
+                int j2low = floor(j*ratioy);// + it->y_start;
+                int j2high = floor((j+1)*ratioy-1);// + it->y_start;
+                
+                if(j2high < j2low){
+                    j2high = j2low;
+                }
+                if(j2high > newYDim - 1){
+                    j2high = newYDim -1 ;
+                }
+                
+                int jw = j2high - j2low + 1;
+                
+                for(int i = 0; i <= scaledX3D-1; i++){
+                    
+                    int i2low = floor(i*ratiox);// + it->x_start;
+                    int i2high = floor((i+1)*ratiox - 1);// + it->x_start;
+                    
+                    if(i2high < i2low){
+                        i2high = i2low;
+                    }
+                    
+                    if(i2high > newXDim - 1){
+                        i2high = newXDim -1;
+                    }
+                    
+                    int iw = i2high - i2low + 1;
+                    
+                    double cubeVolume = double(kw)*jw*iw;
+                    int s = 0;
+                    
+                    for(int k1 = k2low; k1<= k2high; k1++){
+                        for(int j1 = j2low; j1<=j2high; j1++){
+                            for(int i1 = i2low; i1<=i2high; i1++){
+                                int pos = k1*(newXDim*newYDim) + j1*newXDim+ i1;
+                                s += (unsigned int)newData[pos];
+                                //cout << "s = " << s << "  pos = " << pos << endl;
+                            }
+                        }
+                    }
+                    //V3DLONG adjustedS = s;// + (it->z_start*(xdim*ydim)+it->y_start*xdim+it->x_start);
+                    //if(cubeVolume == 0) cubeVolume = 1;
+                    V3DLONG result = s/(cubeVolume);
+                    //cout << "cube volume :: " << cubeVolume << endl;
+                    //cout << "result (Calc Average) :: " << result << endl;
+                    //cout << "Counter check :: " << posCounter << endl;
+                    resizedData2[posCounter] = (unsigned char) result;
+                    posCounter++;
+                    
+                }
+            }
+        }
+        
+        cout << "The data is :: " << endl;
+        
+        float *ClassifyArray = new float [scaledX3D*scaledY3D*scaledZ3D];
+        
+        for(int q = 0; q < scaledX3D*scaledY3D*scaledZ3D; q++){
+            // cout << (int)resizedData2[q] << endl;
+            ClassifyArray[q] = resizedData2[q];
+            // cout << ClassifyArray[q] << endl;
+        }
+        cout << endl;
+        
+        int classifierResult = ThreeDClassifier->classifyASample(ClassifyArray, scaledX3D*scaledY3D*scaledZ3D, pmodel3);
+        if(classifierResult == returnValue){
+            return true;
+        }
+        else{
+            return false;
+        }
+        
+    }
+
+
+}
+
+
+int prePredictedValue(ROISegment thisSegment){
+    
+    //find what case it classifies as first
+    
+    //this is a 2D case
+    
+    //this neuron is original1
+    //that neuron is original2
+    if(thisSegment.originalx1 == thisSegment.originalx2 || thisSegment.originaly1 == thisSegment.originaly2 || thisSegment.originalz1 == thisSegment.originalz2){
+        
+        //Need to remap the coordinates so that the resutls are consistent
+        
+        if(thisSegment.originalx1 - thisSegment.originalx2 == 0){
+            if(((thisSegment.originaly1 - thisSegment.originaly2 > 0) && (thisSegment.originalz1 - thisSegment.originalz2 > 0)) || ((thisSegment.originaly1 - thisSegment.originaly2 < 0) && (thisSegment.originalz1 - thisSegment.originalz2 < 0)))    //Case with increasing slope (from left to right)
+            {
+                return 1;
+            }
+            else{
+                return 2;
+            }
+        }
+        else if(thisSegment.originaly1 - thisSegment.originaly2 == 0){
+            if(((thisSegment.originalx1 - thisSegment.originalx2 > 0) && (thisSegment.originalz1 - thisSegment.originalz2 > 0)) || ((thisSegment.originalx1 - thisSegment.originalx2 < 0) && (thisSegment.originalz1 - thisSegment.originalz2 < 0)))
+            {
+                return 1;
+                
+            }
+            else{
+                return 2;
+            }
+        }
+        else{
+            if(((thisSegment.originalx1 - thisSegment.originalx2 > 0) && (thisSegment.originaly1 - thisSegment.originaly2 > 0)) || ((thisSegment.originalx1 - thisSegment.originalx2 < 0) && (thisSegment.originaly1 - thisSegment.originaly2 < 0))){
+                return 1;
+            }
+            else{
+                return 2;
+            }
+        }
+        
+    }
+
+    else{
+        
+        if((thisSegment.originalz1-thisSegment.originalz2 < 0 && thisSegment.originaly1-thisSegment.originaly2 > 0 && thisSegment.originalx1 - thisSegment.originalx2 < 0) || (thisSegment.originalz1-thisSegment.originalz2 > 0 && thisSegment.originaly1-thisSegment.originaly2 < 0 && thisSegment.originalx1 - thisSegment.originalx2 > 0)){
+            return 1;
+        }
+        else if((thisSegment.originalz1-thisSegment.originalz2 < 0 && thisSegment.originaly1-thisSegment.originaly2 < 0 && thisSegment.originalx1 - thisSegment.originalx2 < 0) || (thisSegment.originalz1-thisSegment.originalz2 > 0 && thisSegment.originaly1-thisSegment.originaly2 > 0 && thisSegment.originalx1 - thisSegment.originalx2 > 0)){
+            return 2;
+        }
+        
+        else if((thisSegment.originalz1-thisSegment.originalz2 < 0 && thisSegment.originaly1-thisSegment.originaly2 < 0 && thisSegment.originalx1 - thisSegment.originalx2 > 0) || (thisSegment.originalz1-thisSegment.originalz2 > 0 && thisSegment.originaly1-thisSegment.originaly2 > 0 && thisSegment.originalx1 - thisSegment.originalx2 < 0)){
+            return 3;
+        }
+        else{
+            return 4;
+        }
+        
+    }
+    
+}
 
 
 
