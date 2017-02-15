@@ -684,9 +684,9 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
         string str = ss.str();
         string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages/TrainingImage" + str + ".v3draw";
-        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
-            cout << "Image Saved" << endl;
-        }
+//        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
+//            cout << "Image Saved" << endl;
+//        }
         
         Image4DSimple* resizedImage = new Image4DSimple;
         int resizedX = averagex1D;
@@ -698,12 +698,12 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         
         resizedImage->setData(resizedData2, averagex1D, 1, 1, tImage->getCDim(), tImage->getDatatype());
         cout << "Resized data is set" << endl;
-        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/1DResizedTrainingImage" + str + ".v3draw";
-        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
-            cout << "Resized Image Saved" << endl;
+//        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/1DResizedTrainingImage" + str + ".v3draw";
+//        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
+//            cout << "Resized Image Saved" << endl;
             OneDImageData.push_back(resizedImage);
             ImageNumber1D++;
-        }
+//        }
     }
     
     //2D cases
@@ -836,13 +836,13 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, (int)it->y_end-(int)it->y_start+1, 1, tImage->getCDim(), tImage->getDatatype());
         cout << "data is set" << endl;
         
-        stringstream ss;
-        ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
-        string str = ss.str();
-        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages/TrainingImage" + str + ".v3draw";
-        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
-            cout << "Image Saved" << endl;
-        }
+//        stringstream ss;
+//        ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
+//        string str = ss.str();
+//        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages/TrainingImage" + str + ".v3draw";
+//        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
+//            cout << "Image Saved" << endl;
+//        }
         
         Image4DSimple* resizedImage = new Image4DSimple;
         int resizedX = averagex2D;
@@ -856,13 +856,13 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             TwoDArrayData[TwoDArrayCounter] = resizedData2[i];
             TwoDArrayCounter++;
         }
-        cout << endl;
-        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/2DResizedTrainingImage" + str + ".v3draw";
-        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
-            cout << "Resized Image Saved" << endl;
+//        cout << endl;
+//        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/2DResizedTrainingImage" + str + ".v3draw";
+//        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
+//            cout << "Resized Image Saved" << endl;
             TwoDImageData.push_back(resizedImage);
             ImageNumber2D++;
-        }
+//        }
         
         
     }
@@ -1016,13 +1016,13 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         //cout << "Data2: " << newData << endl;
         newImage->setData(newData, (int)it->x_end-(int)it->x_start+1, (int)it->y_end-(int)it->y_start+1, (int)it->z_end-(int)it->z_start+1, tImage->getCDim(), tImage->getDatatype());
         cout << "data is set" << endl;
-        stringstream ss;
-        ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
-        string str = ss.str();
-        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages/TrainingImage" + str + ".v3draw";
-        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
-            cout << "Image Saved" << endl;
-        }
+//        stringstream ss;
+//        ss << it->originalx1 << "_" << it->originaly1 << "_" << it->originalz1 << "_" << it->originalx2 << "_" << it->originaly2 << "_" << it->originalz2;
+//        string str = ss.str();
+//        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages/TrainingImage" + str + ".v3draw";
+//        if(callback.saveImage(newImage,(char*)fileName.c_str())) {
+//            cout << "Image Saved" << endl;
+//        }
         
         Image4DSimple* resizedImage = new Image4DSimple;
         int resizedX = averagex3D;
@@ -1036,12 +1036,12 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
         
         resizedImage->setData(resizedData2, averagex3D, averagey3D, averagez3D, tImage->getCDim(), tImage->getDatatype());
         cout << "Resized data is set" << endl;
-        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/ResizedTrainingImage" + str + ".v3draw";
-        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
-            cout << "Resized Image Saved" << endl;
+//        string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/ResizedTrainingImage" + str + ".v3draw";
+//        if(callback.saveImage(resizedImage, (char*)resizedFileName.c_str())){
+//            cout << "Resized Image Saved" << endl;
             ThreeDImageData.push_back(resizedImage);
             ImageNumber++;
-        }
+//        }
 
     }
 
@@ -1189,17 +1189,17 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 
                 Negative1DImageData.push_back(newNegativeImage);
                 
-                cout << "Saving Negative Training Sample To Disk" << endl;
+//                cout << "Saving Negative Training Sample To Disk" << endl;
                 
-                stringstream ss;
-                ss << newNegativeSegment.x_start << "_" << newNegativeSegment.y_start << "_" << newNegativeSegment.z_start << "_" << newNegativeSegment.x_end << "_" << newNegativeSegment.y_end << "_" << newNegativeSegment.z_end;
-                
-                string str = ss.str();
-                
-                string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/Negative_Training_Image" + str + ".v3draw";
-                if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
-                    cout << "Resized Image Saved" << endl;
-                }
+//                stringstream ss;
+//                ss << newNegativeSegment.x_start << "_" << newNegativeSegment.y_start << "_" << newNegativeSegment.z_start << "_" << newNegativeSegment.x_end << "_" << newNegativeSegment.y_end << "_" << newNegativeSegment.z_end;
+//                
+//                string str = ss.str();
+//                
+//                string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/Negative_Training_Image" + str + ".v3draw";
+//                if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
+//                    cout << "Resized Image Saved" << endl;
+//                }
             }
         }
     }
@@ -1334,23 +1334,23 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
             
             Negative2DImageData.push_back(newNegativeImage);
             
-            cout << "Saving Negative Training Sample To Disk" << endl;
-            
-            stringstream ss;
-            ss << newNegativeSegment.x_start << "_" << newNegativeSegment.y_start << "_" << newNegativeSegment.z_start << "_" << newNegativeSegment.x_end << "_" << newNegativeSegment.y_end << "_" << newNegativeSegment.z_end;
-            
-            string str = ss.str();
-            
-            string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/Negative_Training_Image" + str + ".v3draw";
-            cout << endl << "The data being written: " << endl;
-            for(int i = 0; i < sizeof(newData)/sizeof(newData[0]); i++){
-                cout << (int)newData[i] << ", ";
-            }
-            cout << endl;
-            
-            if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
-                cout << "Resized Image Saved" << endl;
-            }
+//            cout << "Saving Negative Training Sample To Disk" << endl;
+//            
+//            stringstream ss;
+//            ss << newNegativeSegment.x_start << "_" << newNegativeSegment.y_start << "_" << newNegativeSegment.z_start << "_" << newNegativeSegment.x_end << "_" << newNegativeSegment.y_end << "_" << newNegativeSegment.z_end;
+//            
+//            string str = ss.str();
+//            
+//            string resizedFileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TrainingImages2/Negative_Training_Image" + str + ".v3draw";
+//            cout << endl << "The data being written: " << endl;
+//            for(int i = 0; i < sizeof(newData)/sizeof(newData[0]); i++){
+//                cout << (int)newData[i] << ", ";
+//            }
+//            cout << endl;
+//            
+//            if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
+//                cout << "Resized Image Saved" << endl;
+//            }
             
             }
         }
@@ -1431,10 +1431,10 @@ int startPlugin(V3DPluginCallback2 &callback, QWidget *parent)
                 for(int i = 0; i < sizeof(newData)/sizeof(newData[0]); i++){
                     cout << (int)newData[i] << ", ";
                 }
-                cout << endl;
-                if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
-                    cout << "Resized Image Saved" << endl;
-                }
+//                cout << endl;
+//                if(callback.saveImage(newNegativeImage, (char*)resizedFileName.c_str())){
+//                    cout << "Resized Image Saved" << endl;
+//                }
     
             }
         }
@@ -2144,24 +2144,24 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         
                         newImageResized->setData(resizedData, TwoDXDim, TwoDYDim, 1, tImage->getCDim(), tImage->getDatatype());
                         
-                        stringstream ss;
-                        ss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
-                        string str = ss.str();
-                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDResized" + str + ".v3draw";
-                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
-                            cout << "Image Saved" << endl;
-                        }
+//                        stringstream ss;
+//                        ss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+//                        string str = ss.str();
+//                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDResized" + str + ".v3draw";
+//                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
+//                            cout << "Image Saved" << endl;
+//                        }
                         Image4DSimple* newImage = new Image4DSimple;
                         
                         newImage->setData(newData, NewSegment.x_end - NewSegment.x_start +1, NewSegment.y_end - NewSegment.y_start + 1, NewSegment.z_start - NewSegment.z_end + 1, tImage->getCDim(), tImage->getDatatype());
                         
-                        stringstream sss;
-                        sss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
-                        string str2 = sss.str();
-                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDOriginal" + str2 + ".v3draw";
-                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
-                            cout << "Image Saved" << endl;
-                        }
+//                        stringstream sss;
+//                        sss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
+//                        string str2 = sss.str();
+//                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/TwoDOriginal" + str2 + ".v3draw";
+//                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
+//                            cout << "Image Saved" << endl;
+//                        }
                         if(classifierResult != 0){
                             bool addOne = true;
                             bool addTwo = true;
@@ -2309,10 +2309,10 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         stringstream ss;
                         ss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
                         string str = ss.str();
-                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDResized" + str + ".v3draw";
-                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
-                            cout << "Image Saved" << endl;
-                        }
+//                        string fileName = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDResized" + str + ".v3draw";
+//                        if(callback.saveImage(newImageResized,(char*)fileName.c_str())) {
+//                            cout << "Image Saved" << endl;
+//                        }
                         Image4DSimple* newImage = new Image4DSimple;
                         
                         newImage->setData(newData, NewSegment.x_end - NewSegment.x_start +1, NewSegment.y_end - NewSegment.y_start + 1, NewSegment.z_start - NewSegment.z_end + 1, tImage->getCDim(), tImage->getDatatype());
@@ -2320,10 +2320,10 @@ bool classifySamples(SVMClassifier* OneDClassifier, SVMClassifier* TwoDClassifie
                         stringstream sss;
                         sss << NewSegment.originalx1 << "_" << NewSegment.originaly1 << "_" << NewSegment.originalz1 << "_" << NewSegment.originalx2 << "_" << NewSegment.originaly2 << "_" << NewSegment.originalz2;
                         string str2 = sss.str();
-                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDOriginal" + str2 + ".v3draw";
-                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
-                            cout << "Image Saved" << endl;
-                        }
+//                        string fileName2 = "/Volumes/Mac-Backup/AllenInstituteResearch/TestingImages/ThreeDOriginal" + str2 + ".v3draw";
+//                        if(callback.saveImage(newImage,(char*)fileName2.c_str())) {
+//                            cout << "Image Saved" << endl;
+//                        }
                         
                         //For now, just veriy that the segment is not classified as 'negative'
                         if(classifierResult != 0){
