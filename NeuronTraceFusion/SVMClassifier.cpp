@@ -1,5 +1,6 @@
 #include "SVMClassifier.h"
 #include <iostream>
+#include <sstream>
 
 #include "svm.h"   //libsvm
 
@@ -55,8 +56,14 @@ void SVMClassifier::train(float* features, int *targets, int numberCubes, int nu
       int predict_label = (int) svm_predict(pmodel,x);
       std::cout << "p:" << predict_label <<  "(" << targets[i] << ") ";      
 
-    } 
-    svm_save_model("test_svm_model.txt", pmodel);
+    }
+    
+    std::stringstream str;
+    str << "test_svm_model" << numOfFeatures << ".txt";
+    
+    const char * fileName = str.str().c_str();
+
+    svm_save_model(fileName, pmodel);
 
     //clean up
 	delete[] prob.y;
@@ -66,10 +73,65 @@ void SVMClassifier::train(float* features, int *targets, int numberCubes, int nu
     svm_destroy_param(&param);
 }
 
+void SVMClassifier::train(float* features, int *targets, int numberCubes, int numOfFeatures,  const char * name)
+{
+    struct svm_parameter param;
+    setParameters(NULL, 0, param);
+    
+    struct svm_problem prob;
+    struct svm_node *x_space;
+    prob.l = numberCubes;
+    prob.y = new double[prob.l];
+    prob.x = new struct svm_node *[prob.l]; //init pointer to nodes, essentially a 2D array of svm_node
+    x_space = new struct svm_node[prob.l*(numOfFeatures+1)]; //store all the x of all data samples.
+    int i,j;
+    for(i=0;i<prob.l; i++)
+    {
+        prob.y[i] = (double) targets[i];
+        prob.x[i] = x_space+i*(numOfFeatures+1); //current x_space's starting address.
+        for(j=0; j<numOfFeatures; j++)
+        {
+            prob.x[i][j].index = j+1;
+            prob.x[i][j].value= (double )features[i*numOfFeatures+j];
+        }
+        prob.x[i][j].index = -1; //indicate  the end of current sample. Different from LibSVM Java!
+    }
+    pmodel = svm_train(&prob, &param);
+    
+    //try here:
+    for (i=0;i<prob.l; i++)
+    {
+        struct svm_node *x = x_space + i*(numOfFeatures+1);
+        int predict_label = (int) svm_predict(pmodel,x);
+        std::cout << "p:" << predict_label <<  "(" << targets[i] << ") ";
+        
+    }
+    
+    //std::stringstream str;
+    //str << name;
+    
+    //const char * fileName = str.str().c_str();
+    
+    svm_save_model(name, pmodel);
+    
+    //clean up
+    delete[] prob.y;
+    delete[] prob.x;
+    delete[] x_space;
+    
+    svm_destroy_param(&param);
+}
+
+struct svm_model *  SVMClassifier::loadSVMModel(const char* modelName)
+{
+    pmodel= svm_load_model(modelName);
+    return pmodel;
+}
+
 struct svm_model *  SVMClassifier::loadSVMModel()
 {
-       pmodel= svm_load_model("test_svm_model.txt");
-       return pmodel;      
+    pmodel= svm_load_model("test_svm_model.txt");
+    return pmodel;
 }
 
 //not used since needs to pass in pmodel for SVM.

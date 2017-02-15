@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <string.h>
 
 #include "DataClassifierInterface.h"
 #include "svm.h"
@@ -27,9 +28,11 @@ public:
     ~SVMClassifier(); 	
   
     void train(float* features, int *targets, int numberCubes, int numOfFeatures);  //implement the pure virtual one in interface
+    void train(float* features, int *targets, int numberCubes, int numOfFeatures,  const char* name);
     int classifyASample(float*, int numOfFeatures);  //implement the pure virtual one in interface
     int classifyASample(float* feature, int numOfFeatures, struct svm_model *pmodel);
     int classifyASampleWithProbability(float* feature, int numOfFeatures, struct svm_model *pmodel, double *probability);
+    struct svm_model *  loadSVMModel(const char* );
     struct svm_model *  loadSVMModel();
 };
 
