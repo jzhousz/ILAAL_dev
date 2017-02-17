@@ -18,6 +18,8 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
     
     //First extract the two nodes.
     
+    cout << "In the connect or not function " << endl;
+    
     ROISegment thisSegment;
     
     thisSegment.originalx1 = node1.x;
@@ -75,7 +77,6 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         struct svm_model* pmodel1;
         
         pmodel1 = OneDClassifier->loadSVMModel(OneDClassifierName);
-        
         
         //XDim changed
         char changingDim = '0';
@@ -189,11 +190,9 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         //First thing I will do is load the correct Classifier from disk. This is a .txt file.
         //STILL NEED TO THINK OF A WAY WHERE THE FILE NAME IS DYNAMIC, NOT JUST HARD CODED
         
-        int numberOfFeatures = 20;
-        
         std::stringstream str;
         
-        str << "TwoDClassifier" << numberOfFeatures << ".txt";
+        str << "TwoDClassifier.txt";
         const char * TwoDClassifierName = str.str().c_str();
         SVMClassifier* TwoDClassifier;
         
@@ -361,12 +360,10 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         
         //First thing I will do is load the correct Classifier from disk. This is a .txt file.
         //STILL NEED TO THINK OF A WAY WHERE THE FILE NAME IS DYNAMIC, NOT JUST HARD CODED
-        
-        int numberOfFeatures = 10;
-        
+    
         std::stringstream str;
         
-        str << "ThreeDClassifier" << numberOfFeatures << ".txt";
+        str << "ThreeDClassifier.txt";
         const char * ThreeDClassifierName = str.str().c_str();
         SVMClassifier* ThreeDClassifier;
         
