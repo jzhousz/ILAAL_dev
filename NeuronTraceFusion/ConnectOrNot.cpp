@@ -57,10 +57,10 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         //First thing I will do is load the correct Classifier from disk. This is a .txt file.
         //STILL NEED TO THINK OF A WAY WHERE THE FILE NAME IS DYNAMIC, NOT JUST HARD CODED
         
-        
+        cout << "ONE D CASE " << endl;
         std::stringstream str;
         
-        str << "1DClassifier.txt";
+        str << "OneDClassifier.txt";
         
         
         //After the SVM Model is loaded, load the file with the dimension info
@@ -72,7 +72,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         myfile >> scaledX1D;
         
         const char * OneDClassifierName = str.str().c_str();
-        SVMClassifier* OneDClassifier;
+        SVMClassifier* OneDClassifier = new SVMClassifier();
         
         struct svm_model* pmodel1;
         
@@ -129,6 +129,11 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
             }
         }
         
+        else{
+            return 0;
+        }
+        
+        
         //Have the data for the sub-image. Now resize so it will be able to be fed into the 1D classifier
         
         double ratiox = ((double)((int)thisSegment.x_end-(int)thisSegment.x_start +1))/((double)scaledX1D);
@@ -137,6 +142,8 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         
         int newCount = 0;
         unsigned char resizedData2[scaledX1D];
+        
+        
         
         for(int i = 0; i <= scaledX1D-1; i++){
             int i2low = floor(i*ratiox);
@@ -163,13 +170,14 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
             posCounter++;
         }
         
-        cout << "The data is :: " << endl;
-        
         float *ClassifyArray = new float [scaledX1D];
+        
+        
         
         for(int q = 0; q < scaledX1D; q++){
             ClassifyArray[q] = resizedData2[q];
         }
+        
         
         int classifierResult = OneDClassifier->classifyASample(ClassifyArray, scaledX1D, pmodel1);
         cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
@@ -192,9 +200,11 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         
         std::stringstream str;
         
+        cout << "TWO D CASE " << endl;
+        
         str << "TwoDClassifier.txt";
         const char * TwoDClassifierName = str.str().c_str();
-        SVMClassifier* TwoDClassifier;
+        SVMClassifier* TwoDClassifier = new SVMClassifier();
         
         struct svm_model* pmodel2;
         
@@ -363,9 +373,11 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
     
         std::stringstream str;
         
+        cout << "Three D CASE " << endl;
+        
         str << "ThreeDClassifier.txt";
         const char * ThreeDClassifierName = str.str().c_str();
-        SVMClassifier* ThreeDClassifier;
+        SVMClassifier* ThreeDClassifier = new SVMClassifier();
         
         struct svm_model* pmodel3;
         
