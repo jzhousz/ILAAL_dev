@@ -4,7 +4,7 @@
 
   Efficient location-based connection of swc nodes.
 
-  Usage ./vaa3d64 -x AT_trace_combiner -f combine_swc -i meanshifted.swc -p 20
+  Feb 2017: Add machine learning based validation before connecting the nodes.
 
   **/
 
@@ -19,6 +19,8 @@
 #include <vector>
 #include <iostream>
 #include <iterator> 
+#include "../ConnectOrNot.h"
+
 using namespace std;
 
 #define defaultValue 0   //not found in the map (contructor default value)
@@ -70,7 +72,7 @@ NeuronSWC  searchNearest(long centeri,long centerj, long centerk, int threshold,
 {
 	//check the neighbors with growing radius; 
 	//ignore z-direction resolution difference?
-        NeuronSWC result;
+    NeuronSWC result;
 	for(int r = 0 ;  r < threshold; r++)
 	{
 	  //for radius r
@@ -104,14 +106,19 @@ NeuronSWC  searchNearest(long centeri,long centerj, long centerk, int threshold,
 
 }
 	 
-QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,  int width, int height, int depth)
+//QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,  int width, int height, int depth)
+QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,  V3DLONG size[4], unsigned char * data1d)
 {
-  //build two hashmap to improve the efficiency of searching for nodes in an image
-  QHash<V3DLONG, NeuronSWC> nodeMap = getNodeMap(neurons);  //a hashamp to store id and node structure: key: node_id; value: the node structure     
-  QHash<V3DLONG,V3DLONG> LUT = getUniqueLUT(nodeMap, width, height); //a hashmap to store location and neuron id: key: x,y,z combined; value: node_id. 
+    int width = size[0];
+    int height = size[1];
+    int depth = size[2];
 
-  cout << "Done building up hashmaps. Size of nodeMap:" << nodeMap.size() << endl;
-  cout << "                           Size of LUT:" << LUT.size() << endl;
+     //build two hashmap to improve the efficiency of searching for nodes in an image
+    QHash<V3DLONG, NeuronSWC> nodeMap = getNodeMap(neurons);  //a hashamp to store id and node structure: key: node_id; value: the node structure
+    QHash<V3DLONG,V3DLONG> LUT = getUniqueLUT(nodeMap, width, height); //a hashmap to store location and neuron id: key: x,y,z combined; value: node_id.
+
+    cout << "Done building up hashmaps. Size of nodeMap:" << nodeMap.size() << endl;
+    cout << "                           Size of LUT:" << LUT.size() << endl;
 
    //Connect the nodes that are close enough:
    //Scan through the entire image.
@@ -137,19 +144,27 @@ QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,
 			   NeuronSWC node = nodeMap.value(neuronid);
 			   
 			   //search surrounding
-                           NeuronSWC neighborNode = searchNearest(i,j, k, thres, nodeMap, LUT, width, height, depth);
+               NeuronSWC neighborNode = searchNearest(i,j, k, thres, nodeMap, LUT, width, height, depth);
 
                            //connect the two nodes:
 			   //Do not care about who is the parent for now but give the preference to the one what has a parent already to promote connectivity
                            if (neighborNode.pn != NODENOTFOUND)
 			   {
                                 //   cout << "Found candidates to connect!!! " << endl;
-                                //   cout   << node.n << ":" << node.x << " " << node.y << " " << node.z << " pn:" << node.pn << endl;
+                               //    cout   << node.n << ":" << node.x << " " << node.y << " " << node.z << " pn:" << node.pn << endl;
                                 //   cout   << neighborNode.n << ":" << neighborNode.x << " " << neighborNode.y << " " << neighborNode.z <<" pn:" << neighborNode.pn << endl;
+
+                               //Call Machine Learning module
+                               cout << "start calling connectOrNot .." << endl;
+                               bool MLDecision = connectOrNot(node, neighborNode, data1d, size);
+                               cout << "done calling connectOrNot .." << endl;
+                                //if (connectOrNot(node, neighborNode, data1d, size) == false)
+                               if (MLDecision == false)
+                                       continue; //not connect
 
                                 if (node.pn == -1 && neighborNode.pn  != -1) //node in search has no pn
                                 {
-					    node.pn = neighborNode.n;
+                                            node.pn = neighborNode.n;
                                             //cout << "before" << nodeMap.value(node.n).pn;
                                             nodeMap.insert(node.n, node); //update the hashmap value;
                                             //cout << " after" << nodeMap.value(node.n).pn << endl;
@@ -163,10 +178,10 @@ QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,
                                  }
                                  else if (node.pn == -1 && neighborNode.pn  == -1)//both are -1
                                  {
-					 	node.pn = neighborNode.n;
-                                                  //  cout << "before" << nodeMap.value(node.n).pn;
-						nodeMap.insert(node.n, node); //update the hashmap value;
-                                                 //cout << " after" << nodeMap.value(node.n).pn << endl;
+                                        node.pn = neighborNode.n;
+                                        //  cout << "before" << nodeMap.value(node.n).pn;
+                                        nodeMap.insert(node.n, node); //update the hashmap value;
+                                        //cout << " after" << nodeMap.value(node.n).pn << endl;
                                  }
                                  else //neither is -1. --> both have parents already (pass?)
                                  {
