@@ -4,7 +4,6 @@
 //
 //  Created by Randall Suvanto on 2/13/17.
 //
-//
 
 #include "ConnectOrNot.h"
 using namespace std;
@@ -17,8 +16,6 @@ using namespace std;
 bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long dimensions[]){
     
     //First extract the two nodes.
-    
-    cout << "In the connect or not function " << endl;
     
     ROISegment thisSegment;
     
