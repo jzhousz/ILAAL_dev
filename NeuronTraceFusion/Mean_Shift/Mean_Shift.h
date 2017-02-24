@@ -19,9 +19,11 @@
 #include <sstream>
 
 
-LandmarkList meanShift(vector<NeuronTree> trees, Image4DSimple tImage);
+QList<NeuronSWC> meanShift(vector<NeuronTree> trees, Image4DSimple tImage);
 
 LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList);
+
+QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> inputTree);
 
 
 #endif /* Mean_Shift_h */

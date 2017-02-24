@@ -10,8 +10,9 @@
 
 //Input the vector of neuron trees, and the image itself
 
-LandmarkList meanShift(vector<NeuronTree> trees, Image4DSimple * tImage){
+QList<NeuronSWC> meanShift(vector<NeuronTree> trees, Image4DSimple * tImage){
 
+    QList<NeuronSWC> returnList;
     LandmarkList ExtractedMarkers;
     for(vector<NeuronTree>::iterator it = trees.begin(); it != trees.end(); ++it){  //Iterate through the traces
         for(int i = 0; i < it->listNeuron.size(); i++){   //Iterate through each SWC node in the traces
@@ -23,9 +24,46 @@ LandmarkList meanShift(vector<NeuronTree> trees, Image4DSimple * tImage){
             ExtractedMarkers.append(mrk);
         }
     }
-    return (mean_shift_center(tImage->getRawData(), ExtractedMarkers));
+    
+    LandmarkList meanShiftedList = mean_shift_center(tImage->getRawData(), ExtractedMarkers);
+    return(ReMapMarkersToSWC(meanShiftedList, trees));
 }
 
+QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> inputTree){
+    
+    QList<NeuronSWC> returnTree;
+    int pos = 0;
+    int maxIDOffset;
+    int maxParentOffset = 0;
+    int offsetParent = 0;
+    int offSetID = 0;
+    for(vector<NeuronTree>::iterator it = inputTree.begin(); it != inputTree.end(); ++it){
+        int pos2 = 0;
+        for(int i = 0; i < it->listNeuron.size(); i++){
+            NeuronSWC newNode;
+            newNode.x = inputLList.at(pos).x;
+            newNode.y = inputLList.at(pos).y;
+            newNode.z = inputLList.at(pos).z;
+            newNode.radius = inputLList.at(pos).radius;
+            newNode.pn = int(it->listNeuron.at(pos2).pn) + offsetParent;
+            newNode.n = int(it->listNeuron.at(pos2).n) + offSetID;
+            returnTree.append(newNode);
+            pos++;
+            pos2++;
+            if((int)newNode.pn > maxParentOffset){
+                maxParentOffset = newNode.pn;
+            }
+            if((int)newNode.n > maxIDOffset){
+                maxIDOffset = newNode.n;
+            }
+        }
+        offsetParent = maxParentOffset;
+        offSetID = maxIDOffset;
+        
+    }
+    
+    return returnTree;
+}
 
 LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList)
 {
