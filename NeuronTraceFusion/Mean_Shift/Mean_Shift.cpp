@@ -10,7 +10,7 @@
 
 //Input the vector of neuron trees, and the image itself
 
-QList<NeuronSWC> meanShift(vector<NeuronTree> trees, Image4DSimple * tImage){
+QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data){
 
     QList<NeuronSWC> returnList;
     LandmarkList ExtractedMarkers;
@@ -25,7 +25,7 @@ QList<NeuronSWC> meanShift(vector<NeuronTree> trees, Image4DSimple * tImage){
         }
     }
     
-    LandmarkList meanShiftedList = mean_shift_center(tImage->getRawData(), ExtractedMarkers);
+    LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers);
     return(ReMapMarkersToSWC(meanShiftedList, trees));
 }
 
