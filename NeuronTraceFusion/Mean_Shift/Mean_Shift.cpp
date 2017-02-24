@@ -34,8 +34,6 @@ QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> i
     QList<NeuronSWC> returnTree;
     int pos = 0;
     int maxIDOffset;
-    int maxParentOffset = 0;
-    int offsetParent = 0;
     int offSetID = 0;
     for(vector<NeuronTree>::iterator it = inputTree.begin(); it != inputTree.end(); ++it){
         int pos2 = 0;
@@ -45,20 +43,21 @@ QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> i
             newNode.y = inputLList.at(pos).y;
             newNode.z = inputLList.at(pos).z;
             newNode.radius = inputLList.at(pos).radius;
-            newNode.pn = int(it->listNeuron.at(pos2).pn) + offsetParent;
+            if(it->listNeuron.at(pos2).pn == -1){
+                newNode.pn = -1;
+            }
+            else{
+                newNode.pn = int(it->listNeuron.at(pos2).pn) + offSetID;
+            }
             newNode.n = int(it->listNeuron.at(pos2).n) + offSetID;
             returnTree.append(newNode);
             pos++;
             pos2++;
-            if((int)newNode.pn > maxParentOffset){
-                maxParentOffset = newNode.pn;
-            }
             if((int)newNode.n > maxIDOffset){
                 maxIDOffset = newNode.n;
             }
         }
-        offsetParent = maxParentOffset;
-        offSetID = maxIDOffset;
+        offSetID = maxIDOffset + 1;
         
     }
     
