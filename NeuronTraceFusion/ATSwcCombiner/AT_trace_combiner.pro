@@ -15,6 +15,13 @@ HEADERS += ../DataClassifierInterface.h
 HEADERS += ../SVMClassifier.h
 HEADERS += ../svm.h
 HEADERS += ../ConnectOrNot.h
+### headers realted to meanshift ###
+HEADERS += ../Mean_Shift/mean_shift_fun.h
+HEADERS += ../Mean_Shift/mean_shift_extr_template.h
+HEADERS += ../Mean_Shift/mean_shift_dialog.h
+HEADERS += ../Mean_Shift/heap.h
+HEADERS += ../Mean_Shift/fastmarching_dt.h
+HEADERS += ../Mean_Shift/Mean_Shift.h
 
 SOURCES	+= AT_trace_combiner_plugin.cpp
 SOURCES	+= $$VAA3DMAINPATH/basic_c_fun/v3d_message.cpp
@@ -23,6 +30,9 @@ SOURCES	+= $$VAA3DMAINPATH/basic_c_fun/basic_surf_objs.cpp
 SOURCES	+= ../SVMClassifier.cpp
 SOURCES	+= ../svm.cpp
 SOURCES += ../ConnectOrNot.cpp
+### sources related to meanshift ###
+SOURCES += ../Mean_Shift/Mean_Shift.cpp
+SOURCES += ../Mean_Shift/mean_shift_fun.cpp
 
 TARGET	= $$qtLibraryTarget(AT_trace_combiner)
 DESTDIR	= $$VAA3DPATH/bin/plugins/AT_trace_combiner/
