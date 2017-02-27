@@ -54,7 +54,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         //First thing I will do is load the correct Classifier from disk. This is a .txt file.
         //STILL NEED TO THINK OF A WAY WHERE THE FILE NAME IS DYNAMIC, NOT JUST HARD CODED
         
-        cout << "ONE D CASE " << endl;
+        //cout << "ONE D CASE " << endl;
         std::stringstream str;
         
         str << "OneDClassifier.txt";
@@ -177,7 +177,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         
         
         int classifierResult = OneDClassifier->classifyASample(ClassifyArray, scaledX1D, pmodel1);
-        cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
+       // cout << endl << "The Result After classification :: " << classifierResult << endl << endl;
         
         if(classifierResult == 0){
             return false;
@@ -197,7 +197,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         
         std::stringstream str;
         
-        cout << "TWO D CASE " << endl;
+     //   cout << "TWO D CASE " << endl;
         
         str << "TwoDClassifier.txt";
         const char * TwoDClassifierName = str.str().c_str();
@@ -349,7 +349,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
             ClassifyArray[q] = resizedData[q];
             // cout << ClassifyArray[q] << endl;
         }
-        cout << endl;
+        //cout << endl;
         
         int classifierResult = TwoDClassifier->classifyASample(ClassifyArray, scaledX2D*scaledY2D, pmodel2);
         if (classifierResult == returnValue){
@@ -370,7 +370,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
     
         std::stringstream str;
         
-        cout << "Three D CASE " << endl;
+     //   cout << "Three D CASE " << endl;
         
         str << "ThreeDClassifier.txt";
         const char * ThreeDClassifierName = str.str().c_str();
@@ -489,7 +489,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
             }
         }
         
-        cout << "The data is :: " << endl;
+    //    cout << "The data is :: " << endl;
         
         float *ClassifyArray = new float [scaledX3D*scaledY3D*scaledZ3D];
         
@@ -498,7 +498,7 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
             ClassifyArray[q] = resizedData2[q];
             // cout << ClassifyArray[q] << endl;
         }
-        cout << endl;
+        //cout << endl;
         
         int classifierResult = ThreeDClassifier->classifyASample(ClassifyArray, scaledX3D*scaledY3D*scaledZ3D, pmodel3);
         if(classifierResult == returnValue){
