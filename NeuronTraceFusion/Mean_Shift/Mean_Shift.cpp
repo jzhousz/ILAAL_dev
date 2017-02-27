@@ -10,7 +10,7 @@
 
 //Input the vector of neuron trees, and the image itself
 
-QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data){
+QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data, V3DLONG in_sz[4]){
 
     QList<NeuronSWC> returnList;
     LandmarkList ExtractedMarkers;
@@ -24,8 +24,7 @@ QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data)
             ExtractedMarkers.append(mrk);
         }
     }
-    
-    LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers);
+    LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers, in_sz);
     return(ReMapMarkersToSWC(meanShiftedList, trees));
 }
 
@@ -64,17 +63,20 @@ QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> i
     return returnTree;
 }
 
-LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList)
+LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V3DLONG in_sz[4])
 {
-    
     mean_shift_fun fun_obj;
     
     //check parameter
     int windowradius=15;
-    int intype = 1;     //??????
+    int intype = 1;
     //load image and markers
     
     V3DLONG sz_img[4];
+    sz_img[0] = in_sz[0];
+    sz_img[1] = in_sz[1];
+    sz_img[2] = in_sz[2];
+    sz_img[3] = in_sz[3];
     
     V3DLONG size_tmp=sz_img[0]*sz_img[1]*sz_img[2]*sz_img[3];
     if(intype==1)
@@ -102,7 +104,6 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList)
     LandmarkList LList_new_center;
     LList_new_center.clear();
     vector<float> mass_center;
-    
     for (int j=0;j<poss_landmark.size();j++)
     {
         //append the original marker in LList_new_center
