@@ -116,10 +116,9 @@ bool ATTraceCombinerPlugin::dofunc(const QString & func_name, const V3DPluginArg
         }
 
         //3. call meanshifting on each neuron tree, combine the meanshifted ones into one long list
-        QList<NeuronSWC> nodeList= meanShift(nt_list, data1d);
+        QList<NeuronSWC> nodeList= meanShift(nt_list, data1d, in_sz);
 
         //4. call connect_node() to get the nodes to get a new swc file
-        cout << "calling connect node ...  " << endl;
         //QList<NeuronSWC> nodeList = readSWC_file(PARA.inswc_file).listNeuron;
         QHash<V3DLONG, NeuronSWC> nodeMap = connect_node(nodeList, PARA.threshold, in_sz, data1d);
 
