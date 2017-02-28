@@ -8,13 +8,16 @@
 
 #include "Mean_Shift.h"
 
-//Input the vector of neuron trees, and the image itself
+//Input the vector of neuron trees, and the image itself, plus image dimensions
 
+
+//MeanShift Each individual tree FIRST and then merge them.
 QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data, V3DLONG in_sz[4]){
 
-    QList<NeuronSWC> returnList;
-    LandmarkList ExtractedMarkers;
+    QList<LandmarkList> meanShiftedLists;
+    
     for(vector<NeuronTree>::iterator it = trees.begin(); it != trees.end(); ++it){  //Iterate through the traces
+        LandmarkList ExtractedMarkers;
         for(int i = 0; i < it->listNeuron.size(); i++){   //Iterate through each SWC node in the traces
             LocationSimple mrk;
             mrk.x = it->listNeuron.at(i).x;
@@ -23,40 +26,46 @@ QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data,
             mrk.radius = it->listNeuron.at(i).r;
             ExtractedMarkers.append(mrk);
         }
+        LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers, in_sz);
+        meanShiftedLists.push_back(ExtractedMarkers);
     }
-    LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers, in_sz);
-    return(ReMapMarkersToSWC(meanShiftedList, trees));
+    if (image_data!=0) {delete []image_data; image_data=0;} //Deallocate memory for image. Not needed anymore
+    return(ReMapMarkersToSWC(meanShiftedLists, trees));
 }
 
-QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> inputTree){
+//Remap the markers to swc format.
+QList<NeuronSWC> ReMapMarkersToSWC(QList<LandmarkList> inputQLList, vector<NeuronTree> inputTree){
     
-    QList<NeuronSWC> returnTree;
-    int pos = 0;
-    int maxIDOffset;
-    int offSetID = 0;
-    for(vector<NeuronTree>::iterator it = inputTree.begin(); it != inputTree.end(); ++it){
-        int pos2 = 0;
-        for(int i = 0; i < it->listNeuron.size(); i++){
-            NeuronSWC newNode;
-            newNode.x = inputLList.at(pos).x;
-            newNode.y = inputLList.at(pos).y;
-            newNode.z = inputLList.at(pos).z;
-            newNode.radius = inputLList.at(pos).radius;
-            if(it->listNeuron.at(pos2).pn == -1){
+    QList<NeuronSWC> returnTree;    //Define the tree we will return
+    int maxIDOffset = 0;                //maxOffsetID. Keep a max value so we know how much we will have to shift each node ID by to avoid duplicates
+    int offSetID = 0;               //Final offSet that we will offset each node by. 0 in beginning since no offset yet.
+    
+    int listNumber = 0; //Which list we are looking at will correlate to which tree we are looking at
+    
+    for(vector<NeuronTree>::iterator it = inputTree.begin(); it != inputTree.end(); ++it){      //Cycle through the original trees
+        int pos2 = 0;               //Define position for
+        LandmarkList inputLList = inputQLList.at(listNumber);   //Landmark list at [listnumber] will correlate to the input trees.
+        for(int i = 0; i < it->listNeuron.size(); i++){         //Cycle though the Neurons in the original trees
+            NeuronSWC newNode;                                  //Define a SWC node
+            newNode.x = inputLList.at(pos2).x;                   //Initialize x,y,z coords from the mean shifted LList
+            newNode.y = inputLList.at(pos2).y;
+            newNode.z = inputLList.at(pos2).z;
+            newNode.radius = inputLList.at(pos2).radius;
+            if(it->listNeuron.at(pos2).pn == -1){               //if the input tree's node is -1 (no parent - root) then same is true in mean shifted restult
                 newNode.pn = -1;
             }
-            else{
+            else{                           //Else the new node parent ID will be equal to the original plus the offset
                 newNode.pn = int(it->listNeuron.at(pos2).pn) + offSetID;
             }
-            newNode.n = int(it->listNeuron.at(pos2).n) + offSetID;
-            returnTree.append(newNode);
-            pos++;
+            newNode.n = int(it->listNeuron.at(pos2).n) + offSetID;  //Original ID equal to the original ID plus the offset (combining multiple)
+            returnTree.append(newNode);                             //Append the node with the new information.
             pos2++;
-            if((int)newNode.n > maxIDOffset){
+            if((int)newNode.n > maxIDOffset){   //Update the offset ID for the next list iteration if the new node's ID is greater that the previously initalized
                 maxIDOffset = newNode.n;
             }
         }
-        offSetID = maxIDOffset + 1;
+        listNumber++;   //Next list
+        offSetID = maxIDOffset + 1; //set offset ID to be +1 just to be safe
         
     }
     
@@ -121,7 +130,7 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V
     }
     qDebug()<<"LList_new_center_size:"<<LList_new_center.size();
 
-    if (image_data!=0) {delete []image_data; image_data=0;}
+//    if (image_data!=0) {delete []image_data; image_data=0;}
     return LList_new_center;
 }
 

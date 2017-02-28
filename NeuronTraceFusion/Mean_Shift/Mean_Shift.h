@@ -23,7 +23,7 @@ QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data,
 
 LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V3DLONG in_sz[4]);
 
-QList<NeuronSWC> ReMapMarkersToSWC(LandmarkList inputLList, vector<NeuronTree> inputTree);
+QList<NeuronSWC> ReMapMarkersToSWC(QList<LandmarkList> inputQLList, vector<NeuronTree> inputTree);
 
 
 #endif /* Mean_Shift_h */
