@@ -1,3 +1,6 @@
+#ifndef EDGE_H
+#define EDGE_H
+
 #include <vector>
 
 using namespace std;
@@ -14,3 +17,5 @@ public:
 	Edge();
 	Vertex* getOppositeVertex(Vertex* startVertex);
 };
+
+#endif

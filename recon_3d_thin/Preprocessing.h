@@ -1,5 +1,5 @@
-
-
+#ifndef PREPROCESSING_H
+#define PREPROCESSING_H
 
 
 //itk headers
@@ -20,8 +20,6 @@
 #include <ctime>
 
 using namespace std;
-
-
 
 
 //This method is from adaptive thresholdoing plugin. Add a binarization process for some images in BigNeuron gold standard set. 11/2015
@@ -277,16 +275,34 @@ unsigned char * Preprocess(unsigned char* data1d, long N, long M, long P, long s
 	in_sz[2] = P;
 	in_sz[3] = sc;
 
+	//main neuron reconstruction code
+
+	//// THIS IS WHERE THE DEVELOPERS SHOULD ADD THEIR OWN NEURON TRACING CODE
+
+	cout << "width: " << N << endl;
+	cout << "height: " << M << endl;
+	cout << "depth: " << P << endl;
+
+	// * Note by J Zhou June 3 2015
+	// * Vaa3D appears having issue reading a signed int image of only 0 and 1 which was the output skeleton of the thinning algorithm of itk.
+	// *  But it is ok as long as the plugin starts directly from an unsigned image file.
+
+	// * Nov 20 2015: ORNL Hackthon: add some preprocessing/thresholding method since some images in BigNeuron gold standard are noisy and not binarized.
+
 	
-	if (threshold == 0 || threshold == 998)
+
+
+	unsigned char * outimg = 0;
+
+
+	if (threshold == 0)
 	{
-		 if (threshold == 998)
-		 {
-	      unsigned char * outimg = 0;
-		  median_filter(data1d, in_sz, 1, 1, 1, sc, outimg);
-		  delete[] data1d;
-		  data1d = outimg;
-	   } 
+
+
+
+		median_filter(data1d, in_sz, 1, 1, 1, sc, outimg);
+		delete[] data1d;
+		data1d = outimg;
 
 
 		//adaptive thresholding is not suitable for image with big soma since it will leave hole in the middle
@@ -328,15 +344,13 @@ unsigned char * Preprocess(unsigned char* data1d, long N, long M, long P, long s
 	}
 
 	//iterative histogram-based thresholding 
-	if (threshold == 999 || threshold == 0 || threshold == 998)
+	if (threshold == 999 || threshold == 0)
 	{
-		if (threshold != 998 )
-		{
-	     unsigned char * outimg = 0;
-		  median_filter(data1d, in_sz, 1, 1, 1, sc, outimg);
-		  delete[] data1d;
-		  data1d = outimg;
-	   } 
+
+		median_filter(data1d, in_sz, 1, 1, 1, sc, outimg);
+		delete[] data1d;
+		data1d = outimg;
+
 
 		long num = 0;
 		long sum = 0;
@@ -392,8 +406,8 @@ unsigned char * Preprocess(unsigned char* data1d, long N, long M, long P, long s
 				meanv = (int)(0.5*(sum1 / num1 + sum2 / num2));
 			}
 			else{
-				cout << "Issue with thresholding. Set the threshold to 0" << endl;
 				meanv = 0;
+				cout << "error\n";
 			}
 		}
 		//meanv = meanv - 10; //adjust low due to dark image to avoid undertrace
@@ -410,4 +424,4 @@ unsigned char * Preprocess(unsigned char* data1d, long N, long M, long P, long s
 }
 
 
-
+#endif

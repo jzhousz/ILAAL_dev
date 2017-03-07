@@ -10,7 +10,9 @@
  *
  * 2016-1-9:  added more preprocessing such as median filter. Default #of trees is 15. Radius estimation disabled for BIGNEURON.
  *
- * ToDo:  Loop pruning need to be added. Big/bright soma impacts the result and should be removed first. 
+ * ToDo:  Big/bright soma impacts the result and should be removed first.
+ *
+ * See details of employed libraries, see Reconstruction3D.cxx.
  *
  */
  
@@ -24,6 +26,8 @@
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkCastImageFilter.h"
+#include "itkTIFFImageIOFactory.h"
+#include "itkTIFFImageIO.h"
 
 #include "itkConnectedThresholdImageFilter.h"
 #include "itkImageRegionIterator.h"
@@ -253,7 +257,7 @@ void reconstruction_func(V3DPluginCallback2 &callback, QWidget *parent, input_PA
     
     //convert to ITK
     ImageType::Pointer input = ImageType::New();
-    //it also binarize the image.
+    //it also binarizes the image using the threshold (set to 244 and 0)
     createITKImage(data1d, input, N, M, P, PARA.threshold);
   
 
@@ -279,10 +283,12 @@ void reconstructionThinning(itk::Image<signed short, (unsigned) 3> *input, QStri
     typedef itk::BinaryThinningImageFilter3D< ImageType, ImageType > ThinningFilterType;
   
     ThinningFilterType::Pointer thinningFilter = ThinningFilterType::New();
-    thinningFilter->threshold = 5; //threshold to process images of non-zero background, anything less than the one set in createITKimage
+    //threshold to process images of non-zero background, anything in (0,244).
+   // reconstructionTh no longer useful since the binrzation was done in createITKimage(). 
+    thinningFilter->threshold = 5; //just a place holder
     thinningFilter->SetInput(input);
 
-    v3d_msg(QString("Start thinning with reconstruction threshold %1 ...").arg(reconstructionTh),0 );
+    v3d_msg(QString("Start thinning  ..."),0 );
     clock_t begin = clock();
 
     thinningFilter->Update();
@@ -292,6 +298,32 @@ void reconstructionThinning(itk::Image<signed short, (unsigned) 3> *input, QStri
     double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 
     v3d_msg(QString("time used for thinning in secs  %1").arg(elapsed_secs), 0);
+
+
+    //for debugging: save the thinning image
+    /*
+    char * tmpoutfile = "/Users/jiezhou/skeletonizedTest.jpeg";
+    typedef signed short PixelType;
+    const   unsigned int Dimension = 3;
+    typedef itk::Image< PixelType, Dimension > ImageType;
+    typedef itk::ImageFileWriter< ImageType > WriterType;
+    //itk::ImageIOFactory::CreateImageIO("test.tif");
+    //itk::ObjectFactoryBase::RegisterFactory(itk::TIFFImageIOFactory::New());
+    WriterType::Pointer writer = WriterType::New();
+    writer->SetInput(thinningFilter->GetOutput());
+    writer->SetFileName(tmpoutfile);
+    try
+    {
+        writer->Update();
+        cout << tmpoutfile << " sucessfully written the thinned image (before postprocessing such as TrueAnalyze)." << endl;
+    }
+    catch (itk::ExceptionObject &ex)
+    {
+        std::cout << ex << std::endl;
+
+    }
+    */
+
 
     //12/03/2015 call the trueAnalyze in Reconstruction3D.cxx
      v3d_msg(QString("Calling trueAnalyze in Reconstruction3D ..."), 0);
