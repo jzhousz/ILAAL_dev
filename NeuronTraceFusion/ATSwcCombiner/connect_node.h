@@ -124,7 +124,10 @@ QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,
    //Scan through the entire image.
    //For the node in question, search in its surrounding in a gradually increasing radius
    //Until find a node, and it is within a set threshold
-
+    
+    int NegCount = 0;
+    int PosCount = 0;
+    
 	for(long i = 0;  i < width; i++)
         {
           //cout << "at x " << i << endl ;
@@ -155,13 +158,14 @@ QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,
                                 //   cout   << neighborNode.n << ":" << neighborNode.x << " " << neighborNode.y << " " << neighborNode.z <<" pn:" << neighborNode.pn << endl;
 
                                //Call Machine Learning module
-                               cout << "start calling connectOrNot .." << endl;
                                bool MLDecision = connectOrNot(node, neighborNode, data1d, size);
-                               cout << "done calling connectOrNot .." << endl;
+                              // cout << "ML decision:" << MLDecision << endl;
                                 //if (connectOrNot(node, neighborNode, data1d, size) == false)
-                               if (MLDecision == false)
+                                if (MLDecision == false){
+                                        NegCount++;
                                        continue; //not connect
-
+                                }
+                                PosCount++;
                                 if (node.pn == -1 && neighborNode.pn  != -1) //node in search has no pn
                                 {
                                             node.pn = neighborNode.n;
@@ -192,8 +196,13 @@ QHash<V3DLONG, NeuronSWC> connect_node(QList<NeuronSWC> & neurons, double thres,
                   } //end of k
                 } //end of j
              } //end of is
-		
+    
+                cout << "The amount of positive returns :: " << PosCount << endl;
+                cout << "The amount of negative returns :: " << NegCount << endl;
+                cout << "The average amount rejected :: " << (double)((double)NegCount/(double)(PosCount+NegCount)) << endl;
+    
              //convert the nodeMap back to swc file and save to the swc file
+    
              return nodeMap;
 }	
 
