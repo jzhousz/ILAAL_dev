@@ -112,7 +112,7 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V
 {
     mean_shift_fun fun_obj;
     //check parameter
-    int windowradius=5;
+    int windowradius=3;
     int intype = 1;
     //load image and markers
     
