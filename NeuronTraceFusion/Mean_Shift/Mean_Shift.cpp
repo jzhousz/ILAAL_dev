@@ -7,6 +7,7 @@
 //
 
 #include "Mean_Shift.h"
+#include <cmath>
 
 //Input the vector of neuron trees, and the image itself, plus image dimensions
 
@@ -25,16 +26,32 @@ QList<NeuronSWC> meanShift(vector<NeuronTree> trees, unsigned char * image_data,
             //If any of the coordinate values are less than 0 then set it equal to 0. Negative numbers cause problems in meanshifting
             if(it->listNeuron.at(i).x < 0.0){
                 mrk.x = 1;
-            }else {mrk.x = it->listNeuron.at(i).x;}
+            }
+            else if(it->listNeuron.at(i).x > in_sz[0])
+            {
+                mrk.x = in_sz[0] - 1;
+            }
+            else {mrk.x = it->listNeuron.at(i).x;}
+            
             if(it->listNeuron.at(i).y < 0.0){
                 mrk.y = 1;
-            }else {mrk.y = it->listNeuron.at(i).y;}
+            }
+            else if(it->listNeuron.at(i).y > in_sz[1]){
+                mrk.y = in_sz[1] -1;
+            }
+            else {mrk.y = it->listNeuron.at(i).y;}
+            
             if(it->listNeuron.at(i).z < 0.0){
                 mrk.z = 1;
-            }else {mrk.z = it->listNeuron.at(i).z;}
+            }
+            else if(it->listNeuron.at(i).z > in_sz[2]){
+                mrk.z = in_sz[2] -1;
+            }
+            else {mrk.z = it->listNeuron.at(i).z;}
             
             mrk.radius = it->listNeuron.at(i).r;
             ExtractedMarkers.append(mrk);
+            
         }
         LandmarkList meanShiftedList = mean_shift_center(image_data, ExtractedMarkers, in_sz);
         meanShiftedLists.push_back(meanShiftedList);
@@ -58,10 +75,16 @@ QList<NeuronSWC> ReMapMarkersToSWC(QList<LandmarkList> inputQLList, vector<Neuro
         LandmarkList inputLList = inputQLList.at(listNumber);   //Landmark list at [listnumber] will correlate to the input trees.
         for(int i = 0; i < it->listNeuron.size(); i++){         //Cycle though the Neurons in the original trees
             NeuronSWC newNode;                                  //Define a SWC node
-            newNode.x = int(inputLList.at(pos2).x);                   //Initialize x,y,z coords from the mean shifted LList
-            newNode.y = int(inputLList.at(pos2).y);
-            newNode.z = int(inputLList.at(pos2).z);
-            newNode.radius = int(inputLList.at(pos2).radius + 0.49);
+            newNode.x = inputLList.at(pos2).x;                   //Initialize x,y,z coords from the mean shifted LList
+            newNode.y = inputLList.at(pos2).y;
+            newNode.z = inputLList.at(pos2).z;
+            if(abs(inputLList.at(pos2).x - it->listNeuron.at(pos2).x) > 15*inputLList.at(pos2).radius || abs(inputLList.at(pos2).y - it->listNeuron.at(pos2).y) > 15*inputLList.at(pos2).radius || abs(inputLList.at(pos2).z - it->listNeuron.at(pos2).z) > 15*inputLList.at(pos2).radius){
+                cout << "The node was put in the original spot" << endl;
+                newNode.x = it->listNeuron.at(pos2).x;
+                newNode.y = it->listNeuron.at(pos2).y;
+                newNode.z = it->listNeuron.at(pos2).z;
+            }
+            newNode.radius = inputLList.at(pos2).radius;
            // cout << "POS2 :: " << pos2 << "   PARENT :: "  << it->listNeuron.at(pos2).pn << endl;
             if(it->listNeuron.at(pos2).pn == -1){               //if the input tree's node is -1 (no parent - root) then same is true in mean shifted restult
                 newNode.pn = -1;
@@ -89,7 +112,7 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V
 {
     mean_shift_fun fun_obj;
     //check parameter
-    //int windowradius=15;
+    int windowradius=5;
     int intype = 1;
     //load image and markers
     
@@ -134,7 +157,8 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V
         LList[j].color.r=255; LList[j].color.g=LList[j].color.b=0;
         //LList_new_center.append(LList.at(j));
         
-        mass_center=fun_obj.mean_shift_center(poss_landmark[j],LList.at(j).radius);
+        mass_center=fun_obj.mean_shift_center(poss_landmark[j],LList.at(j).radius*windowradius);
+//        mass_center=fun_obj.mean_shift_center(poss_landmark[j],10);
         //LocationSimple tmp(mass_center[0]+1,mass_center[1]+1,mass_center[2]+1);
         LocationSimple tmp(mass_center[0],mass_center[1],mass_center[2]);
         tmp.color.r=170; tmp.color.g=0; tmp.color.b=255;
