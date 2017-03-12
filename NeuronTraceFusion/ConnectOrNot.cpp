@@ -352,7 +352,8 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         //cout << endl;
         
         int classifierResult = TwoDClassifier->classifyASample(ClassifyArray, scaledX2D*scaledY2D, pmodel2);
-        if (classifierResult == returnValue){
+//        if (classifierResult == returnValue){
+        if(classifierResult != 0){
             return true;
         }
         else{
@@ -501,7 +502,8 @@ bool connectOrNot(NeuronSWC node1, NeuronSWC node2, unsigned char* image1d, long
         //cout << endl;
         
         int classifierResult = ThreeDClassifier->classifyASample(ClassifyArray, scaledX3D*scaledY3D*scaledZ3D, pmodel3);
-        if(classifierResult == returnValue){
+//        if(classifierResult == returnValue){
+        if(classifierResult !=0){
             return true;
         }
         else{
