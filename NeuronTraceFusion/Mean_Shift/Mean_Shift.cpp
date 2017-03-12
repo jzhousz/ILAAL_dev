@@ -86,12 +86,12 @@ QList<NeuronSWC> ReMapMarkersToSWC(QList<LandmarkList> inputQLList, vector<Neuro
             }
             newNode.radius = inputLList.at(pos2).radius;
            // cout << "POS2 :: " << pos2 << "   PARENT :: "  << it->listNeuron.at(pos2).pn << endl;
-            if(it->listNeuron.at(pos2).pn == -1){               //if the input tree's node is -1 (no parent - root) then same is true in mean shifted restult
+//            if(it->listNeuron.at(pos2).pn == -1){               //if the input tree's node is -1 (no parent - root) then same is true in mean shifted restult
                 newNode.pn = -1;
-            }
-            else{                           //Else the new node parent ID will be equal to the original plus the offset
-                newNode.pn = int(it->listNeuron.at(pos2).pn) + offSetID;
-            }
+//            }
+//            else{                           //Else the new node parent ID will be equal to the original plus the offset
+//                newNode.pn = int(it->listNeuron.at(pos2).pn) + offSetID;
+//            }
             newNode.n = int(it->listNeuron.at(pos2).n) + offSetID;  //Original ID equal to the original ID plus the offset (combining multiple)
             returnTree.append(newNode);                             //Append the node with the new information.
             pos2++;
@@ -159,8 +159,8 @@ LandmarkList mean_shift_center(unsigned char * image_data, LandmarkList LList, V
         
         mass_center=fun_obj.mean_shift_center(poss_landmark[j],LList.at(j).radius*windowradius);
 //        mass_center=fun_obj.mean_shift_center(poss_landmark[j],10);
-        //LocationSimple tmp(mass_center[0]+1,mass_center[1]+1,mass_center[2]+1);
-        LocationSimple tmp(mass_center[0],mass_center[1],mass_center[2]);
+        LocationSimple tmp(mass_center[0]+1,mass_center[1]+1,mass_center[2]+1);
+//         LocationSimple tmp(mass_center[0],mass_center[1],mass_center[2]);
         tmp.color.r=170; tmp.color.g=0; tmp.color.b=255;
         tmp.name="ms";
         LList_new_center.append(tmp);
